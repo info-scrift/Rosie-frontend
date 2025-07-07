@@ -1,0 +1,390 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 255 255 255;
+    --foreground: 30 41 59;
+    --card: 255 255 255;
+    --card-foreground: 30 41 59;
+    --popover: 255 255 255;
+    --popover-foreground: 30 41 59;
+    --primary: 29 78 216;
+    --primary-foreground: 255 255 255;
+    --secondary: 248 250 252;
+    --secondary-foreground: 30 41 59;
+    --muted: 248 250 252;
+    --muted-foreground: 100 116 139;
+    --accent: 14 165 233;
+    --accent-foreground: 255 255 255;
+    --destructive: 220 38 38;
+    --destructive-foreground: 255 255 255;
+    --border: 226 232 240;
+    --input: 226 232 240;
+    --ring: 29 78 216;
+    --radius: 0.75rem;
+    --success: 59 130 246;
+    --success-foreground: 255 255 255;
+    --info: 59 130 246;
+    --info-foreground: 255 255 255;
+  }
+
+  .dark {
+    --background: 15 23 42;
+    --foreground: 248 250 252;
+    --card: 30 41 59;
+    --card-foreground: 248 250 252;
+    --popover: 30 41 59;
+    --popover-foreground: 248 250 252;
+    --primary: 59 130 246;
+    --primary-foreground: 15 23 42;
+    --secondary: 51 65 85;
+    --secondary-foreground: 248 250 252;
+    --muted: 51 65 85;
+    --muted-foreground: 148 163 184;
+    --accent: 56 189 248;
+    --accent-foreground: 15 23 42;
+    --destructive: 220 38 38;
+    --destructive-foreground: 248 250 252;
+    --border: 51 65 85;
+    --input: 51 65 85;
+    --ring: 59 130 246;
+    --success: 34 197 94;
+    --success-foreground: 15 23 42;
+    --info: 147 51 234;
+    --info-foreground: 248 250 252;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+    background-color: white !important;
+  }
+  
+  body {
+    @apply bg-white text-foreground font-body antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+    font-variation-settings: 'opsz' 32;
+    background-color: white !important;
+  }
+  
+  /* Force all page elements to use white background */
+  html, body, #root, .page-container, .layout-container {
+    background-color: white !important;
+  }
+  
+  /* COMPLETE REMOVAL OF ALL FOCUS STATES AND OUTLINES */
+  *,
+  *:before,
+  *:after,
+  *:focus,
+  *:focus-visible,
+  *:focus-within,
+  *:active,
+  *:hover,
+  *[tabindex],
+  button,
+  button:focus,
+  button:focus-visible,
+  button:active,
+  button:hover,
+  a,
+  a:focus,
+  a:focus-visible,
+  a:active,
+  a:hover,
+  input,
+  input:focus,
+  input:focus-visible,
+  input:active,
+  textarea,
+  textarea:focus,
+  textarea:focus-visible,
+  textarea:active,
+  select,
+  select:focus,
+  select:focus-visible,
+  select:active,
+  [role="button"],
+  [role="button"]:focus,
+  [role="button"]:focus-visible,
+  [role="button"]:active,
+  [role="link"],
+  [role="link"]:focus,
+  [role="link"]:focus-visible,
+  [role="link"]:active,
+  [role="tab"],
+  [role="tab"]:focus,
+  [role="tab"]:focus-visible,
+  [role="tab"]:active,
+  [role="menuitem"],
+  [role="menuitem"]:focus,
+  [role="menuitem"]:focus-visible,
+  [role="menuitem"]:active,
+  [role="option"],
+  [role="option"]:focus,
+  [role="option"]:focus-visible,
+  [role="option"]:active,
+  [data-radix-collection-item],
+  [data-radix-collection-item]:focus,
+  [data-radix-collection-item]:focus-visible,
+  [data-radix-collection-item]:active,
+  [data-radix-select-trigger],
+  [data-radix-select-trigger]:focus,
+  [data-radix-select-trigger]:focus-visible,
+  [data-radix-select-trigger]:active,
+  [data-radix-dropdown-menu-trigger],
+  [data-radix-dropdown-menu-trigger]:focus,
+  [data-radix-dropdown-menu-trigger]:focus-visible,
+  [data-radix-dropdown-menu-trigger]:active,
+  [data-radix-navigation-menu-trigger],
+  [data-radix-navigation-menu-trigger]:focus,
+  [data-radix-navigation-menu-trigger]:focus-visible,
+  [data-radix-navigation-menu-trigger]:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-focus-ring-color: transparent !important;
+  }
+  
+  /* Remove all possible focus rings and highlights */
+  *:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  
+  /* Remove browser default focus styling */
+  :focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  
+  /* COMPLETE ELIMINATION OF ALL ORANGE/YELLOW/AMBER COLORS */
+  .text-orange-600, .text-orange-700, .text-orange-800, .text-orange-500, .text-orange-400,
+  .text-yellow-600, .text-yellow-700, .text-yellow-800, .text-yellow-500, .text-yellow-400,
+  .text-amber-600, .text-amber-700, .text-amber-800, .text-amber-500, .text-amber-400,
+  [class*="text-orange"], [class*="text-yellow"], [class*="text-amber"] {
+    color: rgb(71 85 105) !important;
+  }
+  
+  .bg-orange-50, .bg-orange-100, .bg-orange-200, .bg-orange-300,
+  .bg-yellow-50, .bg-yellow-100, .bg-yellow-200, .bg-yellow-300,
+  .bg-amber-50, .bg-amber-100, .bg-amber-200, .bg-amber-300,
+  [class*="bg-orange"], [class*="bg-yellow"], [class*="bg-amber"] {
+    background-color: rgb(248 250 252) !important;
+  }
+  
+  /* Force white backgrounds on all transitions and layouts */
+  .bg-sidebar-accent, .page-transition, .layout-container {
+    background-color: white !important;
+  }
+  
+  /* Fix form elements completely */
+  input, textarea, select, [role="combobox"], [data-radix-select-trigger] {
+    background-color: white !important;
+    border-color: rgb(226 232 240) !important;
+    color: rgb(30 41 59) !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  
+  /* Override browser autocomplete styling */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: rgb(30 41 59) !important;
+    background-color: white !important;
+  }
+  
+  /* Fix buttons */
+  button {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  
+  /* Fix links */
+  a {
+    outline: none !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
+  }
+  
+  /* Global form label fix */
+  label, .form-label, .input-label, .field-label, 
+  [class*="label"], th, .table-header, .filter-label {
+    color: rgb(71 85 105) !important;
+  }
+  
+  /* Table and dropdown fixes */
+  th, thead td, .table-head, .dropdown-item, .select-item {
+    color: rgb(71 85 105) !important;
+    background-color: white !important;
+  }
+  
+  /* Status badge fixes */
+  .status-badge, .badge, [class*="badge"] {
+    background-color: rgb(248 250 252) !important;
+    color: rgb(71 85 105) !important;
+    border-color: rgb(226 232 240) !important;
+  }
+}
+
+@layer components {
+  .gradient-blue-primary {
+    @apply bg-gradient-to-br from-blue-600 to-blue-800;
+  }
+
+  .gradient-blue-light {
+    @apply bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50;
+    background-color: white !important;
+  }
+
+  .gradient-hero-blue {
+    @apply bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800;
+  }
+
+  .professional-card {
+    @apply bg-white border border-slate-200 rounded-xl shadow-blue-soft hover:shadow-blue-glow transition-all duration-300;
+  }
+
+  .premium-card {
+    @apply bg-white/95 backdrop-blur-xl border border-slate-200/60 rounded-xl shadow-blue-soft hover:shadow-blue-glow transition-all duration-300;
+  }
+
+  .saas-button {
+    @apply inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-200 disabled:pointer-events-none disabled:opacity-50;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  .saas-button-primary {
+    @apply saas-button bg-blue-600 text-white hover:bg-blue-700 shadow-blue-soft hover:shadow-blue-glow;
+  }
+
+  .saas-button-secondary {
+    @apply saas-button bg-white text-slate-700 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 hover:text-blue-700;
+  }
+
+  .saas-button-outline {
+    @apply saas-button border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white;
+  }
+
+  .saas-button-accent {
+    @apply saas-button bg-blue-500 text-white hover:bg-blue-600 shadow-blue-soft hover:shadow-blue-glow;
+  }
+
+  .executive-button-primary {
+    @apply saas-button bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-blue-glow;
+  }
+
+  .executive-button-secondary {
+    @apply saas-button bg-white text-slate-700 border border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 shadow-blue-soft;
+  }
+
+  .professional-input {
+    @apply flex h-11 w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm transition-all duration-200 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  .professional-form-input {
+    @apply bg-white border-slate-200;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  .text-gradient-blue {
+    @apply bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-accent {
+    @apply bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent;
+  }
+
+  .text-gradient {
+    @apply text-gradient-primary;
+  }
+
+  .section-padding {
+    @apply py-16 lg:py-20;
+  }
+
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  .navbar-refined {
+    @apply h-16 bg-white/95 backdrop-blur-xl border-b border-slate-200/60;
+  }
+
+  .navbar-dark {
+    @apply h-16 gradient-blue-primary border-b border-blue-800/30 backdrop-blur-xl;
+  }
+
+  .status-badge-active {
+    @apply bg-blue-100 text-blue-800 border-blue-200;
+  }
+
+  .status-badge-pending {
+    @apply bg-slate-100 text-slate-800 border-slate-200;
+  }
+
+  .status-badge-inactive {
+    @apply bg-gray-100 text-gray-800 border-gray-200;
+  }
+
+  .status-badge-danger {
+    @apply bg-red-100 text-red-800 border-red-200;
+  }
+
+  .status-badge-info {
+    @apply bg-blue-50 text-blue-700 border-blue-200;
+  }
+
+  .status-badge-paused {
+    @apply bg-slate-100 text-slate-700 border-slate-200;
+  }
+
+  /* Card hover effects */
+  .card-hover {
+    @apply hover:shadow-blue-glow transition-all duration-300;
+  }
+
+  /* Button glow effect */
+  .btn-glow {
+    @apply shadow-blue-soft hover:shadow-blue-glow;
+  }
+  
+  /* Enhanced logo sizing */
+  .logo-header {
+    @apply h-12 w-auto;
+  }
+  
+  .logo-footer {
+    @apply h-10 w-auto;
+  }
+  
+  /* Navigation symmetry improvements */
+  .nav-balanced {
+    @apply flex items-center justify-between;
+  }
+  
+  .nav-actions {
+    @apply flex items-center space-x-4;
+  }
+}
