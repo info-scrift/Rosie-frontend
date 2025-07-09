@@ -87,6 +87,7 @@ import AdminFeatureFlags from "./pages/admin/AdminFeatureFlags";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import ServerError from "./pages/ServerError";
+import Interview from "./pages/Interview";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,7 @@ const App = () => (
             <Route path="jobs" element={<Jobs />} />
             <Route path="jobs/:jobId" element={<JobDetail />} />
             <Route path="voice-bot" element={<VoiceBot />} />
+            <Route path="interview" element={<Interview />}/>
             <Route path="upload-resume" element={<UploadResume />} />
             <Route path="job-matches" element={<JobMatches />} />
             <Route path="apply" element={<QuickApply />} />
