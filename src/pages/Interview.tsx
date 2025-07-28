@@ -71,6 +71,10 @@ const Interview = () => {
       setIsSpeaking(false)
       setIsPaused(false)
       setCurrentUtterance(null)
+
+
+
+      
     }
 
     utterance.onboundary = (event) => {
