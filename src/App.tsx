@@ -11,6 +11,7 @@ import AuthLayout from "./layouts/AuthLayout";
 import ClientLayout from "./layouts/ClientLayout";
 import AdminLayout from "./layouts/AdminLayout";
 
+
 // Public Pages
 import Index from "./pages/Index";
 import Jobs from "./pages/Jobs";
