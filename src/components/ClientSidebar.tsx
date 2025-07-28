@@ -22,6 +22,7 @@ const navigation = [
   { name: 'Billing', href: '/client/portal/billing', icon: CreditCard },
   { name: 'Team', href: '/client/portal/team', icon: UserPlus },
   { name: 'Settings', href: '/client/portal/settings', icon: Settings },
+
 ];
 
 const ClientSidebar = () => {

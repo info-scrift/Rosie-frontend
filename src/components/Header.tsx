@@ -20,6 +20,8 @@ const Header = () => {
     { title: "Jobs", url: "/jobs", icon: Briefcase },
     { title: "Voice Bot", url: "/voice-bot", icon: MessageCircle },
     { title: "Hire", url: "/hire", icon: Phone },
+        { title: "Interview", url: "/interview", icon: Briefcase },
+
   ];
 
   const profileItems = [
