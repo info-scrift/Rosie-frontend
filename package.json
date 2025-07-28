@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "lint": "eslint .",
-    "preview": "vite preview"
+  "lint": "eslint . --ext .ts,.tsx",
+  "preview": "vite preview --port 5000"
   },
   "dependencies": {
     "@11labs/react": "^0.1.4",
