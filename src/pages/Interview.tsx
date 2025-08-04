@@ -41,7 +41,8 @@ const Interview = () => {
   const [evaluationLoading, setEvaluationLoading] = useState(false)
 
   const voiceBot = useInterviewVoiceBot()
-
+  console.log('the key is '+ GROQ_API_KEY)
+  console.log("voice bot is listening:", voiceBot.isListening)
   console.log("answers are")
   console.log(answers)
 
@@ -74,7 +75,7 @@ const Interview = () => {
 
 
 
-      
+
     }
 
     utterance.onboundary = (event) => {
