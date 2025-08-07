@@ -634,9 +634,9 @@ import { useState } from "react"
 import axios from "axios"
 import { useInterviewVoiceBot } from "@/hooks/useInterviewVoiceBot"
 import { Mic, MicOff, ArrowRight, FileText, Briefcase, MessageSquare, Award, Loader2, Play, Volume2, Sparkles, Clock, CheckCircle, User, Brain } from 'lucide-react'
+import { getApiUrl } from "@/utils/getUrl"
 
-// const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000"
-const BACKEND_URL = "http://localhost:3000"
+  const baseURL=getApiUrl()
 
 const Interview = () => {
   const [resumeText, setResumeText] = useState("")
@@ -731,7 +731,7 @@ const Interview = () => {
 
     setLoading(true)
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/interview/generate-questions`, {
+      const response = await axios.post(`${baseURL}/interview/generate-questions`, {
         resumeText: resumeText.trim(),
         jobDescription: jobDescription.trim()
       })
@@ -774,7 +774,7 @@ const Interview = () => {
 
   const evaluateInterview = async (finalAnswers = answers) => {
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/interview/evaluate-interview`, {
+      const response = await axios.post(`${baseURL}/api/interview/evaluate-interview`, {
         questions: questions,
         answers: finalAnswers
       })
