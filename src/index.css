@@ -151,7 +151,7 @@
   [data-radix-navigation-menu-trigger]:active {
     outline: none !important;
     box-shadow: none !important;
-    border: none !important;
+    /* border: none !important; */
     -webkit-tap-highlight-color: transparent !important;
     -webkit-focus-ring-color: transparent !important;
   }

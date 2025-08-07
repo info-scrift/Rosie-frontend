@@ -39,7 +39,7 @@ const AuthLayout = () => {
       </div>
       
       <motion.div 
-        className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10"
+  className="mt-8 sm:mx-auto sm:w-full sm:max-w-3xl relative z-10"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.2 }}
