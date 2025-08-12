@@ -484,24 +484,6 @@ const Register = () => {
             </div>
 
             <div>
-              <Label htmlFor="role" className="text-gray-700">
-                Role
-              </Label>
-              <Select onValueChange={(value) => setUserFormData({ ...userFormData, role: value })}>
-                <SelectTrigger className="mt-1 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="job_seeker">Job Seeker</SelectItem>
-                  <SelectItem value="recruiter">Recruiter</SelectItem>
-                  <SelectItem value="hr_manager">HR Manager</SelectItem>
-                  <SelectItem value="hiring_manager">Hiring Manager</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
               <Label htmlFor="user-password" className="text-gray-700">
                 Password
               </Label>

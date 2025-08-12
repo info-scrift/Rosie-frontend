@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
+import { loginUser } from "@/services/userservice/login";
+import { saveAuthTokens } from "@/services/userservice/auth";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -21,10 +23,29 @@ const Login = () => {
     setIsLoading(true);
     
     // Simulate login
-    setTimeout(() => {
       console.log("Login attempt:", formData);
-      setIsLoading(false);
-    }, 1000);
+      try {
+        const res = await loginUser(formData.email, formData.password);
+    
+        // Save tokens
+        saveAuthTokens(res.access_token, res.refresh_token,{ role: res.user.role });
+        console.log(res.user.role);
+        // Redirect to dashboard (use current frontend origin)
+        const redirectUrl = new URL(res.redirect);
+        // redirectUrl.port = "8080"; // Replace 5173 with 8080
+        window.location.href = redirectUrl.toString();
+    
+        // Alternatively, if you want to use React Router instead:
+        // navigate("/dashboard");
+    
+      } catch (error) {
+        console.error("Login failed:", error);
+        // Show error message to user
+      } finally {
+        setIsLoading(false);
+      }
+    
+
   };
 
   return (

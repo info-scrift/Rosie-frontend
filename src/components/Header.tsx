@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getUserRole } from "@/services/userservice/auth"; 
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
@@ -13,14 +14,32 @@ import {
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [role, setRole] = useState<string | null>(getUserRole());
+
+// keep role in sync (same-tab + cross-tab)
+useEffect(() => {
+  const handleStorage = (e: StorageEvent) => {
+    if (e.key === "role") setRole(getUserRole());
+  };
+  const handleRoleChanged = () => setRole(getUserRole()); 
+
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener("role-changed", handleRoleChanged as EventListener);
+  setRole(getUserRole());
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener("role-changed", handleRoleChanged as EventListener);
+  };
+}, []);
   const location = useLocation();
   
   const navigationItems = [
     { title: "Home", url: "/", icon: Home },
     { title: "Jobs", url: "/jobs", icon: Briefcase },
     { title: "Voice Bot", url: "/voice-bot", icon: MessageCircle },
-    { title: "Hire", url: "/hire", icon: Phone },
-        { title: "Interview", url: "/interview", icon: Briefcase },
+    // { title: "Hire", url: "/hire", icon: Phone },
+    // { title: "Interview", url: "/interview", icon: Briefcase },
 
   ];
 
@@ -50,7 +69,8 @@ const Header = () => {
         animate={{ y: 0 }} 
         transition={{ duration: 0.4, ease: [0.25, 0.4, 0.55, 1.4] }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
           <div className="flex items-center justify-between h-20">
             {/* Logo - Left Side */}
             <Link to="/" className="flex items-center space-x-3 z-50">
@@ -129,104 +149,109 @@ const Header = () => {
                   </div>
                 </motion.div>
 
-                {/* Account Section */}
-                <motion.div 
-                  className="border-t border-slate-200 pt-8"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3, duration: 0.4 }}
+               {/* Account Section */}
+<motion.div 
+  className="border-t border-slate-200 pt-8"
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: 0.3, duration: 0.4 }}
+>
+  <h2 className="text-xl font-bold text-slate-900 mb-6 px-2">Account</h2>
+  <div className="space-y-3">
+
+    {((role ?? "").trim().toLowerCase() === "company") ? (
+      // ===== Employers Portal Dropdown (UNCHANGED) =====
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.35, duration: 0.3 }}
+      >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full flex items-center justify-between space-x-4 p-4 rounded-xl hover:bg-slate-50 text-slate-700 transition-colors duration-200">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <Building className="w-6 h-6" />
+                </div>
+                <span className="text-lg font-medium">Employers Portal</span>
+              </div>
+              <ChevronDown className="w-5 h-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56 bg-white shadow-lg border border-slate-200">
+            {employerItems.map((item) => (
+              <DropdownMenuItem key={item.title} asChild>
+                <Link 
+                  to={item.url} 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-4 py-2 text-sm hover:bg-slate-50 cursor-pointer"
                 >
-                  <h2 className="text-xl font-bold text-slate-900 mb-6 px-2">Account</h2>
-                  <div className="space-y-3">
-                    {/* Profile Dropdown */}
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.35, duration: 0.3 }}
-                    >
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="w-full flex items-center justify-between space-x-4 p-4 rounded-xl hover:bg-slate-50 text-slate-700 transition-colors duration-200">
-                            <div className="flex items-center space-x-4">
-                              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                                <User className="w-6 h-6" />
-                              </div>
-                              <span className="text-lg font-medium">Profile</span>
-                            </div>
-                            <ChevronDown className="w-5 h-5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56 bg-white shadow-lg border border-slate-200">
-                          {profileItems.map((item) => (
-                            <DropdownMenuItem key={item.title} asChild>
-                              <Link 
-                                to={item.url} 
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="block px-4 py-2 text-sm hover:bg-slate-50 cursor-pointer"
-                              >
-                                {item.title}
-                              </Link>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </motion.div>
-                    
-                    {/* Employers Portal Dropdown */}
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4, duration: 0.3 }}
-                    >
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="w-full flex items-center justify-between space-x-4 p-4 rounded-xl hover:bg-slate-50 text-slate-700 transition-colors duration-200">
-                            <div className="flex items-center space-x-4">
-                              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                                <Building className="w-6 h-6" />
-                              </div>
-                              <span className="text-lg font-medium">Employers Portal</span>
-                            </div>
-                            <ChevronDown className="w-5 h-5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56 bg-white shadow-lg border border-slate-200">
-                          {employerItems.map((item) => (
-                            <DropdownMenuItem key={item.title} asChild>
-                              <Link 
-                                to={item.url} 
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="block px-4 py-2 text-sm hover:bg-slate-50 cursor-pointer"
-                              >
-                                {item.title}
-                              </Link>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </motion.div>
-                    
-                    {/* Get Started Button */}
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.45, duration: 0.3 }}
-                      className="pt-4"
-                    >
-                      <Link 
-                        to="/login" 
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="block w-full"
-                      >
-                        <Button 
-                          className="w-full h-14 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold text-lg rounded-xl shadow-lg shadow-blue-500/25 transition-all duration-200"
-                        >
-                          Get Started
-                        </Button>
-                      </Link>
-                    </motion.div>
-                  </div>
-                </motion.div>
+                  {item.title}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </motion.div>
+    ) : (
+      // ===== Profile Dropdown (UNCHANGED) =====
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.35, duration: 0.3 }}
+      >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full flex items-center justify-between space-x-4 p-4 rounded-xl hover:bg-slate-50 text-slate-700 transition-colors duration-200">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <User className="w-6 h-6" />
+                </div>
+                <span className="text-lg font-medium">Profile</span>
+              </div>
+              <ChevronDown className="w-5 h-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56 bg-white shadow-lg border border-slate-200">
+            {profileItems.map((item) => (
+              <DropdownMenuItem key={item.title} asChild>
+                <Link 
+                  to={item.url} 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-4 py-2 text-sm hover:bg-slate-50 cursor-pointer"
+                >
+                  {item.title}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </motion.div>
+    )}
+
+    {/* Get Started Button (UNCHANGED) */}
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.45, duration: 0.3 }}
+      className="pt-4"
+    >
+      <Link 
+        to="/login" 
+        onClick={() => setMobileMenuOpen(false)}
+        className="block w-full"
+      >
+        <Button 
+          className="w-full h-14 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold text-lg rounded-xl shadow-lg shadow-blue-500/25 transition-all duration-200"
+        >
+          Get Started
+        </Button>
+      </Link>
+    </motion.div>
+
+  </div>
+</motion.div>
+
               </div>
             </div>
           </motion.div>

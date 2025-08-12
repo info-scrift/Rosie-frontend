@@ -24,7 +24,7 @@ const Profile = () => {
       description: "Built full-stack web applications using React and Node.js"
     }]
   };
-  return <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  return <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 my-10">
       <div className="space-y-6">
         {/* Profile Header */}
         <Card>

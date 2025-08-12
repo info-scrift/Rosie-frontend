@@ -20,7 +20,6 @@ import VoiceBot from "./pages/VoiceBot";
 import UploadResume from "./pages/UploadResume";
 import JobMatches from "./pages/JobMatches";
 import QuickApply from "./pages/QuickApply";
-
 // Auth Pages
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -116,6 +115,7 @@ const App = () => (
 
           {/* Auth Routes */}
           <Route element={<AuthLayout />}>
+          
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
