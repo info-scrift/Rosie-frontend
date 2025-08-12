@@ -9,7 +9,10 @@ import { motion } from "framer-motion";
 const JobDetail = () => {
   const { jobId } = useParams();
   const navigate = useNavigate();
-
+  const handleQuickApply = () => {
+    // pass the whole job object to the interview page
+    navigate("/interview", { state: { job } });
+  };
   // Mock job data - in real app, this would come from API
   const job = {
     id: jobId,
@@ -106,7 +109,7 @@ const JobDetail = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-wrap items-center gap-3 mb-4">
                         <Badge className="bg-blue-100 text-blue-800 border-blue-200">
                           <Star className="w-3 h-3 mr-1" />
@@ -138,7 +141,7 @@ const JobDetail = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex space-x-2">
                       <Button variant="outline" size="sm" className="border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700">
                         <Heart className="w-4 h-4 mr-1" />
@@ -151,7 +154,7 @@ const JobDetail = () => {
                     </div>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent>
                   <div className="space-y-8">
                     <div>
@@ -228,7 +231,8 @@ const JobDetail = () => {
                       Apply Now
                     </Button>
                   </Link>
-                  <Button variant="outline" className="w-full border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700">
+                  <Button onClick={handleQuickApply}
+                    variant="outline" className="w-full border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700">
                     Quick Apply with Resume
                   </Button>
                   <div className="text-center pt-2">
