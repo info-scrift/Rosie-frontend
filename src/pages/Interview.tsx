@@ -131,7 +131,7 @@ const Interview = () => {
           `${baseURL}/interview/generate-questions`,
           { resumeText: resume, jobDescription: jdLocal },
           {
-            headers: { Authorization: `Bearer ${token ?? ""}` }, // if your route is protected
+            headers: { Authorization: `Bearer ${token ?? ""}` },
             withCredentials: true,
           }
         );

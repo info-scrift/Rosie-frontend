@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,37 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ProfessionalCard } from "@/components/ui/professional-card";
-import { User, Mail, Phone, MapPin, Briefcase, GraduationCap, Award, Upload, X, Plus, Save, Eye } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  User,
+  Briefcase,
+  GraduationCap,
+  Award,
+  Upload,
+  X,
+  Plus,
+  Save,
+  Eye,
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getApplicantProfile } from "@/services/userservice/applicant";
+
+// ---- helpers ----
+const mapExperienceYearsToLabel = (n?: number | null): string => {
+  if (n == null) return "";
+  if (n >= 10) return "10+ years";
+  if (n >= 8) return "8+ years";
+  if (n >= 6) return "6-7 years";
+  if (n >= 4) return "4-5 years";
+  if (n >= 2) return "2-3 years";
+  return "0-1 years";
+};
+
 const EditProfile = () => {
   const [profileData, setProfileData] = useState({
     firstName: "John",
@@ -17,60 +46,140 @@ const EditProfile = () => {
     phone: "+1 (555) 123-4567",
     location: "San Francisco, CA",
     title: "Senior Software Engineer",
-    company: "TechCorp Solutions",
+    company: "TechCorp Solutions", // not provided by API; remains local
     bio: "Passionate full-stack developer with 8+ years of experience building scalable web applications. Expert in React, Node.js, and cloud technologies.",
-    experience: "8+ years",
-    education: "B.S. Computer Science, Stanford University",
-    website: "https://johndoe.dev",
-    linkedin: "https://linkedin.com/in/johndoe",
-    github: "https://github.com/johndoe"
+    experience: "8+ years", // mapped from experience_years
+    education: "B.S. Computer Science, Stanford University", // not provided by API; remains local
+    website: "https://johndoe.dev", // maps from Portfolio_link
+    linkedin: "https://linkedin.com/in/johndoe", // maps from Linkedin_Profile
+    github: "https://github.com/johndoe", // not provided by API; remains local
   });
-  const [skills, setSkills] = useState(["React", "TypeScript", "Node.js", "Python", "AWS", "Docker", "PostgreSQL", "GraphQL"]);
+
+  const [skills, setSkills] = useState<string[]>([
+    "React",
+    "TypeScript",
+    "Node.js",
+    "Python",
+    "AWS",
+    "Docker",
+    "PostgreSQL",
+    "GraphQL",
+  ]);
   const [newSkill, setNewSkill] = useState("");
   const [activeTab, setActiveTab] = useState("basic");
+
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
   const handleInputChange = (field: string, value: string) => {
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
+
   const addSkill = () => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
       setSkills([...skills, newSkill.trim()]);
       setNewSkill("");
     }
   };
+
   const removeSkill = (skillToRemove: string) => {
-    setSkills(skills.filter(skill => skill !== skillToRemove));
+    setSkills(skills.filter((skill) => skill !== skillToRemove));
   };
-  const tabs = [{
-    id: "basic",
-    label: "Basic Info",
-    icon: User
-  }, {
-    id: "professional",
-    label: "Professional",
-    icon: Briefcase
-  }, {
-    id: "skills",
-    label: "Skills",
-    icon: Award
-  }, {
-    id: "education",
-    label: "Education",
-    icon: GraduationCap
-  }];
-  return <div className="max-w-4xl mx-auto container-padding py-8 space-y-8">
+
+  // ---- fetch & map data from API ----
+  const loadProfile = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getApplicantProfile(); // expected: { profile: {...} }
+      const p = data?.profile;
+
+      if (!p) {
+        setError("Profile not found.");
+        setLoading(false);
+        return;
+      }
+
+      setProfileData({
+        firstName: p.first_name ?? "",
+        lastName: p.last_name ?? "",
+        email: p.email ?? "",
+        phone: p.phone ?? "",
+        location: p.address ?? "",
+        title: p.Curent_Job_Title ?? "", // API uses 'Curent_Job_Title'
+        company: "", // not in API
+        bio: p.Professional_Bio ?? "",
+        experience: mapExperienceYearsToLabel(p.experience_years),
+        education: "", // not in API
+        website: p.Portfolio_link ?? "",
+        linkedin: p.Linkedin_Profile ?? "",
+        github: "", // not in API
+      });
+
+      if (Array.isArray(p.skills)) {
+        setSkills(p.skills);
+      } else {
+        setSkills([]);
+      }
+    } catch (e: any) {
+      console.error("Error fetching profile:", e);
+      setError(
+        typeof e?.message === "string"
+          ? e.message
+          : "Failed to load profile. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const tabs = [
+    { id: "basic", label: "Basic Info", icon: User },
+    { id: "professional", label: "Professional", icon: Briefcase },
+    { id: "skills", label: "Skills", icon: Award },
+    // { id: "education", label: "Education", icon: GraduationCap },
+  ];
+
+  // ---- loading state (no UI layout changes) ----
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto container-padding py-8 space-y-8">
+        <div className="text-center py-10">Loading profile...</div>
+      </div>
+    );
+  }
+
+  // ---- error state (no UI layout changes) ----
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto container-padding py-8 space-y-8">
+        <div className="text-center py-10">
+          <div className="mb-4 text-red-600">{error}</div>
+          <Button variant="outline" onClick={loadProfile}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto container-padding py-8 space-y-8">
       {/* Header */}
-      <motion.div initial={{
-      opacity: 0,
-      y: -20
-    }} animate={{
-      opacity: 1,
-      y: 0
-    }} transition={{
-      duration: 0.5
-    }} className="flex justify-between items-center">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex justify-between items-center my-10"
+      >
         <div>
           <h1 className="text-4xl font-display font-bold text-gradient-primary mb-2">
             Edit Profile
@@ -80,10 +189,6 @@ const EditProfile = () => {
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <Button variant="outline" className="bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-            <Eye className="w-4 h-4 mr-2" />
-            Preview
-          </Button>
           <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-blue-soft hover:shadow-blue-glow focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
             <Save className="w-4 h-4 mr-2" />
             Save Changes
@@ -98,7 +203,8 @@ const EditProfile = () => {
             <div className="relative">
               <div className="w-32 h-32 bg-blue-100 rounded-full flex items-center justify-center">
                 <span className="text-blue-600 font-bold text-4xl">
-                  {profileData.firstName[0]}{profileData.lastName[0]}
+                  {profileData.firstName?.[0] ?? ""}
+                  {profileData.lastName?.[0] ?? ""}
                 </span>
               </div>
               <button className="absolute bottom-2 right-2 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
@@ -109,8 +215,13 @@ const EditProfile = () => {
               <h3 className="text-2xl font-bold mb-2 text-black">
                 {profileData.firstName} {profileData.lastName}
               </h3>
-              <p className="text-lg text-muted-foreground mb-4">{profileData.title}</p>
-              <Button variant="outline" className="bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+              <p className="text-lg text-muted-foreground mb-4">
+                {profileData.title}
+              </p>
+              <Button
+                variant="outline"
+                className="bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
                 <Upload className="w-4 h-4 mr-2" />
                 Upload New Photo
               </Button>
@@ -123,10 +234,20 @@ const EditProfile = () => {
       <ProfessionalCard variant="executive">
         <CardContent className="p-0">
           <div className="flex border-b">
-            {tabs.map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center px-6 py-4 font-medium transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${activeTab === tab.id ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50" : "text-slate-600 hover:text-slate-900"}`}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center px-6 py-4 font-medium transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  activeTab === tab.id
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
                 <tab.icon className="w-4 h-4 mr-2" />
                 {tab.label}
-              </button>)}
+              </button>
+            ))}
           </div>
         </CardContent>
       </ProfessionalCard>
@@ -134,66 +255,120 @@ const EditProfile = () => {
       {/* Tab Content */}
       <ProfessionalCard variant="executive">
         <CardContent className="p-8">
-          {activeTab === "basic" && <motion.div initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} className="space-y-6">
+          {activeTab === "basic" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-slate-600 font-medium">First Name</Label>
-                  <Input id="firstName" value={profileData.firstName} onChange={e => handleInputChange("firstName", e.target.value)} className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500" />
+                  <Label htmlFor="firstName" className="text-slate-600 font-medium">
+                    First Name
+                  </Label>
+                  <Input
+                    id="firstName"
+                    value={profileData.firstName}
+                    onChange={(e) => handleInputChange("firstName", e.target.value)}
+                    className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-slate-600 font-medium">Last Name</Label>
-                  <Input id="lastName" value={profileData.lastName} onChange={e => handleInputChange("lastName", e.target.value)} className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500" />
+                  <Label htmlFor="lastName" className="text-slate-600 font-medium">
+                    Last Name
+                  </Label>
+                  <Input
+                    id="lastName"
+                    value={profileData.lastName}
+                    onChange={(e) => handleInputChange("lastName", e.target.value)}
+                    className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-600 font-medium">Email Address</Label>
-                <Input id="email" type="email" value={profileData.email} onChange={e => handleInputChange("email", e.target.value)} className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500" />
+                <Label htmlFor="email" className="text-slate-600 font-medium">
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={profileData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-slate-600 font-medium">Phone Number</Label>
-                  <Input id="phone" value={profileData.phone} onChange={e => handleInputChange("phone", e.target.value)} className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500" />
+                  <Label htmlFor="phone" className="text-slate-600 font-medium">
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={profileData.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                    className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="location" className="text-slate-600 font-medium">Location</Label>
-                  <Input id="location" value={profileData.location} onChange={e => handleInputChange("location", e.target.value)} className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500" />
+                  <Label htmlFor="location" className="text-slate-600 font-medium">
+                    Location
+                  </Label>
+                  <Input
+                    id="location"
+                    value={profileData.location}
+                    onChange={(e) => handleInputChange("location", e.target.value)}
+                    className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="bio" className="text-slate-600 font-medium">Professional Bio</Label>
-                <Textarea id="bio" value={profileData.bio} onChange={e => handleInputChange("bio", e.target.value)} className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500 min-h-24" placeholder="Tell us about your professional background and goals..." />
+                <Label htmlFor="bio" className="text-slate-600 font-medium">
+                  Professional Bio
+                </Label>
+                <Textarea
+                  id="bio"
+                  value={profileData.bio}
+                  onChange={(e) => handleInputChange("bio", e.target.value)}
+                  className="bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500 min-h-24"
+                  placeholder="Tell us about your professional background and goals..."
+                />
               </div>
-            </motion.div>}
+            </motion.div>
+          )}
 
-          {activeTab === "professional" && <motion.div initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} className="space-y-6">
+          {activeTab === "professional" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-slate-600 font-medium">Current Job Title</Label>
-                <Input id="title" value={profileData.title} onChange={e => handleInputChange("title", e.target.value)} className="professional-form-input" />
+                <Label htmlFor="title" className="text-slate-600 font-medium">
+                  Current Job Title
+                </Label>
+                <Input
+                  id="title"
+                  value={profileData.title}
+                  onChange={(e) => handleInputChange("title", e.target.value)}
+                  className="professional-form-input"
+                />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="company" className="text-slate-600 font-medium">Current Company</Label>
-                <Input id="company" value={profileData.company} onChange={e => handleInputChange("company", e.target.value)} className="professional-form-input" />
-              </div>
+              {/* <div className="space-y-2">
+                <Label htmlFor="company" className="text-slate-600 font-medium">
+                  Current Company
+                </Label>
+                <Input
+                  id="company"
+                  value={profileData.company}
+                  onChange={(e) => handleInputChange("company", e.target.value)}
+                  className="professional-form-input"
+                />
+              </div> */}
 
               <div className="space-y-2">
-                <Label htmlFor="experience" className="text-slate-600 font-medium">Years of Experience</Label>
-                <Select value={profileData.experience} onValueChange={value => handleInputChange("experience", value)}>
+                <Label htmlFor="experience" className="text-slate-600 font-medium">
+                  Years of Experience
+                </Label>
+                <Select
+                  value={profileData.experience}
+                  onValueChange={(value) => handleInputChange("experience", value)}
+                >
                   <SelectTrigger className="professional-form-input">
                     <SelectValue />
                   </SelectTrigger>
@@ -210,41 +385,80 @@ const EditProfile = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="website" className="text-slate-600 font-medium">Website/Portfolio</Label>
-                  <Input id="website" value={profileData.website} onChange={e => handleInputChange("website", e.target.value)} className="professional-form-input" placeholder="https://yourwebsite.com" />
+                  <Label htmlFor="website" className="text-slate-600 font-medium">
+                    Website/Portfolio
+                  </Label>
+                  <Input
+                    id="website"
+                    value={profileData.website}
+                    onChange={(e) => handleInputChange("website", e.target.value)}
+                    className="professional-form-input"
+                    placeholder="https://yourwebsite.com"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="linkedin" className="text-slate-600 font-medium">LinkedIn Profile</Label>
-                  <Input id="linkedin" value={profileData.linkedin} onChange={e => handleInputChange("linkedin", e.target.value)} className="professional-form-input" placeholder="https://linkedin.com/in/yourprofile" />
+                  <Label htmlFor="linkedin" className="text-slate-600 font-medium">
+                    LinkedIn Profile
+                  </Label>
+                  <Input
+                    id="linkedin"
+                    value={profileData.linkedin}
+                    onChange={(e) => handleInputChange("linkedin", e.target.value)}
+                    className="professional-form-input"
+                    placeholder="https://linkedin.com/in/yourprofile"
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="github" className="text-slate-600 font-medium">GitHub Profile</Label>
-                <Input id="github" value={profileData.github} onChange={e => handleInputChange("github", e.target.value)} className="professional-form-input" placeholder="https://github.com/yourusername" />
+                <Label htmlFor="github" className="text-slate-600 font-medium">
+                  GitHub Profile
+                </Label>
+                <Input
+                  id="github"
+                  value={profileData.github}
+                  onChange={(e) => handleInputChange("github", e.target.value)}
+                  className="professional-form-input"
+                  placeholder="https://github.com/yourusername"
+                />
               </div>
-            </motion.div>}
+            </motion.div>
+          )}
 
-          {activeTab === "skills" && <motion.div initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} className="space-y-6">
+          {activeTab === "skills" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="space-y-4">
                 <Label className="text-slate-600 font-medium">Technical Skills</Label>
                 <div className="flex flex-wrap gap-2">
-                  {skills.map(skill => <Badge key={skill} variant="secondary" className="flex items-center space-x-1 px-3 py-1 bg-blue-50 text-blue-700 border-blue-200">
+                  {skills.map((skill) => (
+                    <Badge
+                      key={skill}
+                      variant="secondary"
+                      className="flex items-center space-x-1 px-3 py-1 bg-blue-50 text-blue-700 border-blue-200"
+                    >
                       <span>{skill}</span>
-                      <button onClick={() => removeSkill(skill)} className="ml-2 hover:text-red-600 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                      <button
+                        onClick={() => removeSkill(skill)}
+                        className="ml-2 hover:text-red-600 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      >
                         <X className="w-3 h-3" />
                       </button>
-                    </Badge>)}
+                    </Badge>
+                  ))}
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Input value={newSkill} onChange={e => setNewSkill(e.target.value)} placeholder="Add a skill..." className="flex-1 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500" onKeyPress={e => e.key === "Enter" && addSkill()} />
-                  <Button onClick={addSkill} variant="outline" className="bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                  <Input
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    placeholder="Add a skill..."
+                    className="flex-1 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                    onKeyPress={(e) => e.key === "Enter" && addSkill()}
+                  />
+                  <Button
+                    onClick={addSkill}
+                    variant="outline"
+                    className="bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
@@ -252,46 +466,63 @@ const EditProfile = () => {
 
               <div className="space-y-4">
                 <Label className="text-slate-600 font-medium">Certifications</Label>
-                <Button variant="outline" className="w-full bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <Button
+                  variant="outline"
+                  className="w-full bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Certification
                 </Button>
               </div>
-            </motion.div>}
+            </motion.div>
+          )}
 
-          {activeTab === "education" && <motion.div initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} className="space-y-6">
+          {activeTab === "education" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="education" className="text-slate-600 font-medium">Education</Label>
-                <Input id="education" value={profileData.education} onChange={e => handleInputChange("education", e.target.value)} className="professional-form-input" placeholder="e.g., B.S. Computer Science, Stanford University" />
+                <Label htmlFor="education" className="text-slate-600 font-medium">
+                  Education
+                </Label>
+                <Input
+                  id="education"
+                  value={profileData.education}
+                  onChange={(e) => handleInputChange("education", e.target.value)}
+                  className="professional-form-input"
+                  placeholder="e.g., B.S. Computer Science, Stanford University"
+                />
               </div>
 
               <div className="space-y-4">
                 <Label className="text-slate-600 font-medium">Additional Education</Label>
-                <Button variant="outline" className="executive-button-secondary w-full focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <Button className="executive-button-secondary w-full focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" variant="outline">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Education
                 </Button>
               </div>
-            </motion.div>}
+            </motion.div>
+          )}
         </CardContent>
       </ProfessionalCard>
 
       {/* Save Actions */}
       <div className="flex justify-center space-x-4">
-        <Button variant="outline" size="lg" className="px-8 bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+        <Button
+          variant="outline"
+          size="lg"
+          className="px-8 bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
           Cancel
         </Button>
-        <Button size="lg" className="px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-blue-soft hover:shadow-blue-glow focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+        <Button
+          size="lg"
+          className="px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-blue-soft hover:shadow-blue-glow focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
           <Save className="w-4 h-4 mr-2" />
           Save All Changes
         </Button>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default EditProfile;

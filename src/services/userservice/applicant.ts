@@ -11,7 +11,7 @@ export async function getApplicantProfile() {
     },
     credentials: "include", // optional—remove if you don’t use cookies
   });
-
+  console.log(res)
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Profile fetch failed: ${res.status} ${text}`);
