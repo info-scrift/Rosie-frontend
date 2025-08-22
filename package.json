@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-  "lint": "eslint . --ext .ts,.tsx",
-  "preview": "vite preview --port 5000"
+    "lint": "eslint . --ext .ts,.tsx",
+    "preview": "vite preview --port 5000"
   },
   "dependencies": {
     "@11labs/react": "^0.1.4",
@@ -50,7 +50,7 @@
     "framer-motion": "^12.19.2",
     "input-otp": "^1.2.4",
     "lottie-react": "^2.4.1",
-    "lucide-react": "^0.462.0",
+    "lucide-react": "^0.540.0",
     "next-themes": "^0.3.0",
     "pdfjs-dist": "^3.11.174",
     "phosphor-react": "^1.4.1",

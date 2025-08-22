@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { uploadApplicantPhoto } from "@/services/userservice/applicant";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { uploadApplicantResume } from "@/services/userservice/applicant";
+import { Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   User,
@@ -13,10 +16,11 @@ import {
   Globe,
   Linkedin,
   Calendar,
-  FileText,
+  Camera,
+  FileText as FileTextIcon,
 } from "lucide-react";
 import { getApplicantProfile } from "@/services/userservice/applicant";
-
+import { SweetAlert } from "@/components/ui/SweetAlert";
 // ---- Types (optional) ----
 type Profile = {
   id: string;
@@ -35,6 +39,7 @@ type Profile = {
   Curent_Job_Title?: string | null;
   Portfolio_link?: string | null;
   Linkedin_Profile?: string | null;
+  photo_url?: string | null;
 };
 type ProfileResponse = { profile: Profile };
 
@@ -138,6 +143,76 @@ const LoadingProfileSkeleton = () => (
 const ProfilePage = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [alert, setAlert] = useState<{
+    open: boolean;
+    title: string;
+    message?: string;
+    variant?: "success" | "error" | "info" | "warning";
+  }>({ open: false, title: "", message: "", variant: "info" });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoVersion, setPhotoVersion] = useState(0); // bump to force reload after upload
+  const [imgError, setImgError] = useState(false);     // show fallback if image fails
+
+  const openPhotoPicker = () => photoInputRef.current?.click();
+  
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingPhoto(true);
+      const resp = await uploadApplicantPhoto(file);
+      // Update local profile to reflect the new avatar immediately
+      setProfile(prev => (prev ? { ...prev, photo_url: resp.photo_url } : prev));
+      setPhotoVersion(v => v + 1);   // <— forces <img> to reload with a new query param
+      setImgError(false);            // <— try to render image again
+      setAlert({ open: true, title: "Photo updated", message: "Your profile photo was uploaded successfully.", variant: "success" });
+    } catch (err: any) {
+      console.error(err);
+      setAlert({ open: true, title: "Photo upload failed", message: err?.message || "Something went wrong while uploading your photo.", variant: "error" });
+    } finally {
+      setUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  };
+
+  const closeAlert = () => setAlert(a => ({ ...a, open: false }));
+
+  const resumeInputRef = useRef<HTMLInputElement>(null);
+
+  const openResumePicker = () => resumeInputRef.current?.click();
+
+  const handleResumeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingResume(true);
+      const resp = await uploadApplicantResume(file);
+      // update local profile to refresh the "View" link
+      setProfile((prev) => (prev ? { ...prev, resume_url: resp.resume_url } : prev));
+      setAlert({
+        open: true,
+        title: "Resume updated",
+        message: "Your resume was uploaded successfully.",
+        variant: "success",
+      });
+
+    } catch (err: any) {
+      console.error(err);
+      setAlert({
+        open: true,
+        title: "Resume upload failed",
+        message: err?.message || "Something went wrong while uploading your resume.",
+        variant: "error",
+      });
+
+    } finally {
+      setUploadingResume(false);
+      if (resumeInputRef.current) resumeInputRef.current.value = "";
+    }
+  };
+
 
   useEffect(() => {
     (async () => {
@@ -168,24 +243,74 @@ const ProfilePage = () => {
       </div>
     );
   }
+// Safe to read because we know `profile` exists here
+const basePhoto = profile.photo_url ?? null;
+const imgSrc = basePhoto
+  ? `${basePhoto}${basePhoto.includes("?") ? "&" : "?"}v=${photoVersion}`
+  : null;
 
   const fullName =
     `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || "—";
   const jobTitle = profile.Curent_Job_Title || "Software Engineer";
   const age = calcAge(profile.date_of_birth);
-  const memberSince = formatDate(profile.created_at);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-24 sm:pb-28 my-8 sm:my-10">
       <div className="space-y-6">
         {/* Header (responsive) */}
+        <input
+          ref={resumeInputRef}
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={handleResumeChange}
+        />
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handlePhotoChange}
+        />
+
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-600 rounded-full flex items-center justify-center">
-                  <User className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-blue-600 ring-2 ring-white group">
+                  {imgSrc && !imgError ? (
+                    <img
+                      key={photoVersion}                // re-mount on version change
+                      src={imgSrc}
+                      alt={fullName}
+                      className="w-full h-full object-cover"
+                      onError={() => setImgError(true)} // show fallback if 403/404/etc
+                      crossOrigin="anonymous"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <User className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                    </div>
+                  )}
+
+                  {/* Camera overlay */}
+                  <button
+                    type="button"
+                    onClick={openPhotoPicker}
+                    disabled={uploadingPhoto}
+                    aria-label="Update profile photo"
+                    title="Update profile photo"
+                    className="absolute bottom-0 right-0 m-0.5 sm:m-1 rounded-full bg-white/95 border border-slate-200 p-1.5
+               hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+               disabled:opacity-60 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                  >
+                    <Camera className={`w-3.5 h-3.5 ${uploadingPhoto ? "animate-pulse" : ""}`} />
+                  </button>
                 </div>
+
+
+
                 <div>
                   <CardTitle className="text-xl sm:text-2xl">{fullName}</CardTitle>
                   {/* Contact row stacks on mobile */}
@@ -205,7 +330,6 @@ const ProfilePage = () => {
                     <div className="flex items-center">
                       <Calendar className="w-4 h-4 mr-1" />
                       <span>
-                        Member since {memberSince}
                         {age ? ` · Age ${age}` : ""}
                       </span>
                     </div>
@@ -220,12 +344,24 @@ const ProfilePage = () => {
                       </Button>
                     </Link>
 
-                    <Link to="/profile/edit-resume" className="block">
-                      <Button variant="outline" className="w-full">
-                        <FileText className="w-4 h-4 mr-2" />
-                        Update Resume
-                      </Button>
-                    </Link>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={openResumePicker}
+                      disabled={uploadingResume}
+                    >
+                      {uploadingResume ? (
+                        <>
+                          <Upload className="w-4 h-4 mr-2 animate-pulse" />
+                          Uploading…
+                        </>
+                      ) : (
+                        <>
+                          <FileTextIcon className="w-4 h-4 mr-2" />
+                          Update Resume
+                        </>
+                      )}
+                    </Button>
                   </div>
 
                 </div>
@@ -240,12 +376,24 @@ const ProfilePage = () => {
                   </Button>
                 </Link>
 
-                <Link to="/profile/edit-resume" className="inline-flex">
-                  <Button variant="outline" className="bg-blue-50 text-zinc-950">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Update Resume
-                  </Button>
-                </Link>
+                <Button
+                  variant="outline"
+                  className="bg-blue-50 text-zinc-950"
+                  onClick={openResumePicker}
+                  disabled={uploadingResume}
+                >
+                  {uploadingResume ? (
+                    <>
+                      <Upload className="w-4 h-4 mr-2 animate-pulse" />
+                      Uploading…
+                    </>
+                  ) : (
+                    <>
+                      <FileTextIcon className="w-4 h-4 mr-2" />
+                      Update Resume
+                    </>
+                  )}
+                </Button>
               </div>
 
 
@@ -256,7 +404,7 @@ const ProfilePage = () => {
             <p className="text-gray-700 leading-relaxed">
               {profile.resume_url ? (
                 <span className="inline-flex items-center">
-                  <FileText className="w-4 h-4 mr-2" />
+                  <FileTextIcon className="w-4 h-4 mr-2" />
                   Resume:{" "}
                   <a
                     href={profile.resume_url}
@@ -294,6 +442,17 @@ const ProfilePage = () => {
             )}
           </CardContent>
         </Card>
+        {/* sweet alert for resume*/}
+        <SweetAlert
+          open={alert.open}
+          title={alert.title}
+          message={alert.message}
+          variant={alert.variant}
+          confirmText="OK"
+          onConfirm={closeAlert}
+          onClose={closeAlert}
+        />
+
 
         {/* Skills (wrap nicely on mobile) */}
         <Card>
