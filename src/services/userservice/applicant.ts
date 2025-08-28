@@ -18,7 +18,45 @@ export async function getApplicantProfile() {
   }
   return res.json(); // shape depends on your backend
 }
+export async function deleteApplicantProfileApi(): Promise<void> {
+  const token = getAccessToken();
+  const res = await fetch(`${getApiUrl()}/applicant/profile`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token ?? ""}`,
+    },
+    credentials: "include",
+  });
 
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Delete failed: ${res.status} ${text}`);
+  }
+}
+
+// Call POST /api/applicant/profile/change-password
+export async function changeApplicantPassword(payload: {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}): Promise<{ message: string }> {
+  const token = getAccessToken();
+  const res = await fetch(`${getApiUrl()}/applicant/profile/change-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token ?? ""}`,
+    },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Change password failed: ${res.status} ${text}`);
+  }
+  return res.json();
+}
 export type UploadApplicantResumeResponse = {
   message: string;
   resume_url: string;
