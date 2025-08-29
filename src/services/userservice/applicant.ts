@@ -18,6 +18,38 @@ export async function getApplicantProfile() {
   }
   return res.json(); // shape depends on your backend
 }
+export async function updateApplicantProfileApi(payload: {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  Professional_Bio?: string | null;
+  Curent_Job_Title?: string | null;
+  Portfolio_link?: string | null;
+  Linkedin_Profile?: string | null;
+  skills?: string[];
+  experience_years?: number | null;
+}) {
+  const token = getAccessToken();
+
+  const res = await fetch(`${getApiUrl()}/applicant/profile`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token ?? ""}`,
+    },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Update failed: ${res.status} ${text}`);
+  }
+  return res.json(); // { message, profile }
+}
+
 export async function deleteApplicantProfileApi(): Promise<void> {
   const token = getAccessToken();
   const res = await fetch(`${getApiUrl()}/applicant/profile`, {

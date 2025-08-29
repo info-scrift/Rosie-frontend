@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import GlobalVoiceBot from "@/components/GlobalVoiceBot";
+// import GlobalVoiceBot from "@/components/GlobalVoiceBot";
 
 const PublicLayout = () => {
   return (
@@ -24,7 +24,7 @@ const PublicLayout = () => {
         </motion.main>
       </AnimatePresence>
       <Footer />
-      <GlobalVoiceBot />
+      {/* <GlobalVoiceBot /> */}
     </div>
   );
 };

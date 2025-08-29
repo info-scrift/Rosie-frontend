@@ -115,15 +115,15 @@ const Index = () => {
             duration: 0.8,
             delay: 0.6
           }}>
-              <Link to="/upload-resume">
+              <Link to="/register?form=applicant">
                 <Button size="lg" className="saas-button-primary px-8 py-4 text-lg h-12">
-                  Start Your Journey
+                  Get Started as a Job Seeker
                   <ArrowRight className="w-5 h-5 ml-3" />
                 </Button>
               </Link>
-              <Link to="/jobs">
+              <Link to="/register?form=company">
                 <Button size="lg" className="saas-button-outline px-8 py-4 text-lg h-12">
-                  Explore Opportunities
+                Get Started as an Employer
                 </Button>
               </Link>
             </motion.div>
@@ -248,7 +248,7 @@ const Index = () => {
                 Discover your next career opportunity with AI-powered matching. 
                 Upload your profile and let technology work for you.
               </p>
-              <Link to="/upload-resume">
+              <Link to="/register?form=applicant">
                 <Button size="lg" variant="secondary" className="w-full saas-button-secondary py-4 text-lg bg-white text-primary-700 hover:bg-white/90">
                   Find Opportunities
                   <ArrowRight className="w-6 h-6 ml-3" />
@@ -266,7 +266,7 @@ const Index = () => {
                 Access verified talent across all industries. Post jobs and find 
                 the perfect candidates with our advanced screening process.
               </p>
-              <Link to="/hire">
+              <Link to="/register?form=company">
                 <Button size="lg" variant="secondary" className="w-full saas-button-secondary py-4 text-lg bg-white text-primary-700 hover:bg-white/90">
                   Start Hiring
                   <ArrowRight className="w-6 h-6 ml-3" />

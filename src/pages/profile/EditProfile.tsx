@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { updateApplicantProfileApi } from "@/services/userservice/applicant";
+import { SweetAlert } from "@/components/ui/SweetAlert";
 import { ProfessionalCard } from "@/components/ui/professional-card";
+import { Link, useNavigate } from "react-router-dom";
 import {
   User,
   Briefcase,
@@ -25,7 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getApplicantProfile } from "@/services/userservice/applicant";
+import { getApplicantProfile, uploadApplicantPhoto } from "@/services/userservice/applicant";
+
 
 // ---- helpers ----
 const mapExperienceYearsToLabel = (n?: number | null): string => {
@@ -39,6 +43,7 @@ const mapExperienceYearsToLabel = (n?: number | null): string => {
 };
 
 const EditProfile = () => {
+  const navigate = useNavigate();
   const [profileData, setProfileData] = useState({
     firstName: "John",
     lastName: "Doe",
@@ -54,6 +59,20 @@ const EditProfile = () => {
     linkedin: "https://linkedin.com/in/johndoe", // maps from Linkedin_Profile
     github: "https://github.com/johndoe", // not provided by API; remains local
   });
+  // photo state for edit page
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoVersion, setPhotoVersion] = useState(0); // bust cache after upload
+  const [imgError, setImgError] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const openPhotoPicker = () => photoInputRef.current?.click();
+  const [alert, setAlert] = useState<{
+    open: boolean;
+    title: string;
+    message?: string;
+    variant?: "success" | "error" | "info" | "warning";
+  }>({ open: false, title: "", message: "", variant: "info" });
+  const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
 
   const [skills, setSkills] = useState<string[]>([
     "React",
@@ -67,6 +86,35 @@ const EditProfile = () => {
   ]);
   const [newSkill, setNewSkill] = useState("");
   const [activeTab, setActiveTab] = useState("basic");
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingPhoto(true);
+      const resp = await uploadApplicantPhoto(file);
+      setPhotoUrl(resp.photo_url || null);
+      setPhotoVersion((v) => v + 1); // cache-bust the <img> src
+      setImgError(false);
+      setAlert({
+        open: true,
+        title: "Photo updated",
+        message: "Your profile photo was uploaded successfully.",
+        variant: "success",
+      });
+    } catch (err) {
+      console.error("Photo upload failed:", err);
+      // optional: plug in your SweetAlert here if you use it on this page
+      setAlert({
+        open: true,
+        title: "Photo upload failed",
+        message: err?.message || "Something went wrong while uploading your photo.",
+        variant: "error",
+      });
+    } finally {
+      setUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  };
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +150,9 @@ const EditProfile = () => {
         setLoading(false);
         return;
       }
+      setPhotoUrl(p.photo_url ?? null);
+      setPhotoVersion((v) => v + 1); // force a fresh render when page opens
+      setImgError(false);
 
       setProfileData({
         firstName: p.first_name ?? "",
@@ -138,6 +189,7 @@ const EditProfile = () => {
 
   useEffect(() => {
     loadProfile();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -170,8 +222,59 @@ const EditProfile = () => {
       </div>
     );
   }
+  const mapExperienceLabelToYears = (label?: string): number | null => {
+    switch ((label || "").trim()) {
+      case "10+ years": return 10;
+      case "8+ years": return 8;
+      case "6-7 years": return 6;
+      case "4-5 years": return 4;
+      case "2-3 years": return 2;
+      case "0-1 years": return 0;
+      default: return null;
+    }
+  };
+
+  const handleSaveAllChanges = async () => {
+    try {
+      const payload = {
+        first_name: profileData.firstName || "",
+        last_name: profileData.lastName || "",
+        email: profileData.email || "",          // include only if you allow editing email
+        phone: profileData.phone || "",
+        address: profileData.location || "",
+        Professional_Bio: profileData.bio || null,
+        Curent_Job_Title: profileData.title || null,
+        Portfolio_link: profileData.website || null,
+        Linkedin_Profile: profileData.linkedin || null,
+        skills: skills ?? [],
+        experience_years: mapExperienceLabelToYears(profileData.experience),
+      };
+
+      await updateApplicantProfileApi(payload);
+
+      // optional: success toast / SweetAlert
+      // You can reuse your SweetAlert if you add it to this page too
+      setAlert({
+        open: true,
+        title: "Profile updated",
+        message: "Your changes have been saved successfully.",
+        variant: "success",
+      });
+    } catch (e: any) {
+      console.error(e);
+      setAlert({
+        open: true,
+        title: "Update failed",
+        message: typeof e?.message === "string" ? e.message : "Failed to update profile.",
+        variant: "error",
+      });
+    }
+  };
+
+
 
   return (
+
     <div className="max-w-4xl mx-auto container-padding py-8 space-y-8">
       {/* Header */}
       <motion.div
@@ -189,28 +292,53 @@ const EditProfile = () => {
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-blue-soft hover:shadow-blue-glow focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-            <Save className="w-4 h-4 mr-2" />
-            Save Changes
-          </Button>
+
         </div>
       </motion.div>
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handlePhotoChange}
+      />
+      {/* Global SweetAlert for this page */}
+      <SweetAlert
+        open={alert.open}
+        title={alert.title}
+        message={alert.message}
+        variant={alert.variant}
+        confirmText="OK"
+        onConfirm={closeAlert}
+        onClose={closeAlert}
+      />
 
       {/* Profile Picture Section */}
       <ProfessionalCard variant="executive">
         <CardContent className="p-8">
           <div className="flex items-center space-x-8">
-            <div className="relative">
-              <div className="w-32 h-32 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-bold text-4xl">
-                  {profileData.firstName?.[0] ?? ""}
-                  {profileData.lastName?.[0] ?? ""}
-                </span>
-              </div>
-              <button className="absolute bottom-2 right-2 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                <Upload className="w-4 h-4" />
-              </button>
+            
+            <div className="w-32 h-32 rounded-full overflow-hidden bg-blue-100 ring-2 ring-white">
+              {photoUrl && !imgError ? (
+                <img
+                  key={photoVersion}                 // re-mount on version change
+                  src={`${photoUrl}${photoUrl.includes("?") ? "&" : "?"}v=${photoVersion}`}
+                  alt={`${profileData.firstName} ${profileData.lastName}`}
+                  className="w-full h-full object-cover"
+                  onError={() => setImgError(true)}
+                  crossOrigin="anonymous"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-blue-600 font-bold text-4xl">
+                    {profileData.firstName?.[0] ?? ""}
+                    {profileData.lastName?.[0] ?? ""}
+                  </span>
+                </div>
+              )}
             </div>
+
             <div className="flex-1">
               <h3 className="text-2xl font-bold mb-2 text-black">
                 {profileData.firstName} {profileData.lastName}
@@ -218,13 +346,18 @@ const EditProfile = () => {
               <p className="text-lg text-muted-foreground mb-4">
                 {profileData.title}
               </p>
+              
               <Button
+                type="button"
                 variant="outline"
-                className="bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                onClick={openPhotoPicker}
+                disabled={uploadingPhoto}
+                className="bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60"
               >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload New Photo
+                <Upload className={`w-4 h-4 mr-2 ${uploadingPhoto ? "animate-pulse" : ""}`} />
+                {uploadingPhoto ? "Uploading…" : "Upload New Photo"}
               </Button>
+
             </div>
           </div>
         </CardContent>
@@ -238,11 +371,10 @@ const EditProfile = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-6 py-4 font-medium transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                  activeTab === tab.id
-                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
+                className={`flex items-center px-6 py-4 font-medium transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${activeTab === tab.id
+                  ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                  : "text-slate-600 hover:text-slate-900"
+                  }`}
               >
                 <tab.icon className="w-4 h-4 mr-2" />
                 {tab.label}
@@ -349,17 +481,7 @@ const EditProfile = () => {
                 />
               </div>
 
-              {/* <div className="space-y-2">
-                <Label htmlFor="company" className="text-slate-600 font-medium">
-                  Current Company
-                </Label>
-                <Input
-                  id="company"
-                  value={profileData.company}
-                  onChange={(e) => handleInputChange("company", e.target.value)}
-                  className="professional-form-input"
-                />
-              </div> */}
+
 
               <div className="space-y-2">
                 <Label htmlFor="experience" className="text-slate-600 font-medium">
@@ -509,6 +631,7 @@ const EditProfile = () => {
         <Button
           variant="outline"
           size="lg"
+          onClick={() => navigate("/profile")}
           className="px-8 bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Cancel
@@ -516,10 +639,12 @@ const EditProfile = () => {
         <Button
           size="lg"
           className="px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-blue-soft hover:shadow-blue-glow focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          onClick={handleSaveAllChanges}
         >
           <Save className="w-4 h-4 mr-2" />
           Save All Changes
         </Button>
+
       </div>
     </div>
   );
