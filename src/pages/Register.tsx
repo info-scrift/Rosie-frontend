@@ -62,22 +62,20 @@ const Register = () => {
 
   const baseURL=getApiUrl()
   useEffect(() => {
+    // 1) Read the param once
     const currentForm = (params.get("form") || "").toLowerCase();
-    const tabFromUrl: "user" | "company" = currentForm === "company" ? "company" : "user";
-    if (tabFromUrl !== activeTab) setActiveTab(tabFromUrl);
-  
-    if (params.has("form")) {
+    const tabFromUrl: "user" | "company" =
+      currentForm === "company" ? "company" : "user";
+
+    // 2) Set the tab from the param
+    setActiveTab(tabFromUrl);
+
+    // 3) Clear the query string so the URL is clean
+    if (window.location.search) {
       navigate("/register", { replace: true });
     }
-  }, []);
-  
-  useEffect(() => {
-    const currentForm = (params.get("form") || "").toLowerCase();
-    const tabFromUrl: "user" | "company" = currentForm === "company" ? "company" : "user";
-    if (tabFromUrl !== activeTab) setActiveTab(tabFromUrl);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params]);
-  
+  }, []);
   
   const [companyFormData, setCompanyFormData] = useState<CompanyFormData>({
     email: "",

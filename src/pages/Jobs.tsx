@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Search, MapPin, Building, DollarSign, Clock, Bookmark, Filter, Briefcase, Users, Star, ArrowRight, Heart, Eye, TrendingUp, Award, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PremiumCard } from "@/components/ui/premium-card";
+import { getPublicJobs, Job } from "@/services/jobService";
 
 const Jobs = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,244 +20,148 @@ const Jobs = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("newest");
   const itemsPerPage = 8;
+  // API state
+const [allJobs, setAllJobs] = useState<UIJob[]>([]);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState<string | null>(null);
+
+// fetch whenever currentPage changes (since backend supports ?page=)
+useEffect(() => {
+  (async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const apiJobs = await getPublicJobs(currentPage); // returns Job[]
+      setAllJobs(apiJobs.map(toUIJob));
+    } catch (e: any) {
+      setError(e?.message || "Failed to load jobs");
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, [currentPage]);
+
+  // ---- API -> UI mapping helpers ----
+  type UIJob = {
+    id: string;
+    title: string;
+    company: string;         // backend doesn't return a name, so we derive something readable
+    industry: string | null;
+    location: string | null;
+    type: string;            // maps from job_type
+    salary: string;          // "$X - $Y" or "—"
+    posted: string;          // "2 days ago" or date
+    applicants: number;      // backend doesn't provide; default 0
+    description: string;
+    tags: string[];          // null-safe
+    featured: boolean;
+    remote: boolean;
+    logo: string;            // simple initials
+    urgent: boolean;
+  };
+
+  const timeAgo = (iso?: string | null) => {
+    if (!iso) return "";
+    const then = new Date(iso).getTime();
+    const now = Date.now();
+    const diff = Math.max(0, now - then);
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 48) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 14) return `${days} days ago`;
+    return new Date(iso).toLocaleDateString();
+  };
+
+  const toUIJob = (j: Job): UIJob => {
+    const salary =
+      j.salary_min && j.salary_max
+        ? `$${j.salary_min.toLocaleString()} - $${j.salary_max.toLocaleString()}`
+        : "—";
+
+    // backend has no company name; show a short code
+    const companyShort =
+      j.company_id ? `Company ${j.company_id.slice(0, 6)}` : "Company";
+
+    // logo: initials from title/company code
+    const logo = (j.title || companyShort)
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((s) => s[0]?.toUpperCase() ?? "")
+      .join("");
+
+    return {
+      id: j.id,
+      title: j.title,
+      company: companyShort,
+      industry: j.industry ?? null,
+      location: j.location ?? null,
+      type: j.job_type,
+      salary,
+      posted: timeAgo(j.posted_at ?? j.created_at),
+      applicants: 0,
+      description: j.description,
+      tags: j.tags ?? [],
+      featured: !!j.featured,
+      remote: !!j.remote,
+      logo,
+      urgent: !!j.urgent,
+    };
+  };
 
   // Expanded job listings
-  const allJobs = [
-    {
-      id: "1",
-      title: "Senior Software Engineer",
-      company: "TechCorp Solutions",
-      industry: "Technology",
-      location: "San Francisco, CA",
-      type: "Full-time",
-      salary: "$140,000 - $180,000",
-      posted: "2 days ago",
-      applicants: 34,
-      description: "Join our innovative team building next-generation cloud applications with cutting-edge technologies...",
-      tags: ["React", "TypeScript", "AWS", "Node.js"],
-      featured: true,
-      remote: true,
-      logo: "TC",
-      urgent: false
-    },
-    {
-      id: "2",
-      title: "Product Manager",
-      company: "Innovation Labs",
-      industry: "Technology",
-      location: "New York, NY",
-      type: "Full-time",
-      salary: "$130,000 - $160,000",
-      posted: "1 day ago",
-      applicants: 28,
-      description: "Lead product strategy and development for our revolutionary fintech platform...",
-      tags: ["Product Strategy", "Agile", "Analytics", "Fintech"],
-      featured: false,
-      remote: false,
-      logo: "IL",
-      urgent: true
-    },
-    {
-      id: "3",
-      title: "Senior UX Designer",
-      company: "Design Studio Pro",
-      industry: "Design",
-      location: "Austin, TX",
-      type: "Full-time",
-      salary: "$95,000 - $125,000",
-      posted: "3 days ago",
-      applicants: 41,
-      description: "Create beautiful, user-centered designs for web and mobile applications...",
-      tags: ["Figma", "User Research", "Prototyping", "Design Systems"],
-      featured: true,
-      remote: true,
-      logo: "DS",
-      urgent: false
-    },
-    {
-      id: "4",
-      title: "Data Scientist",
-      company: "Analytics Pro",
-      industry: "Technology",
-      location: "Seattle, WA",
-      type: "Full-time",
-      salary: "$150,000 - $190,000",
-      posted: "1 week ago",
-      applicants: 19,
-      description: "Analyze complex datasets to drive business insights and machine learning solutions...",
-      tags: ["Python", "Machine Learning", "SQL", "TensorFlow"],
-      featured: false,
-      remote: true,
-      logo: "AP",
-      urgent: false
-    },
-    {
-      id: "5",
-      title: "Marketing Director",
-      company: "Growth Partners",
-      industry: "Marketing",
-      location: "Los Angeles, CA",
-      type: "Full-time",
-      salary: "$120,000 - $150,000",
-      posted: "4 days ago",
-      applicants: 22,
-      description: "Lead our marketing team to drive growth and brand awareness across multiple channels...",
-      tags: ["Growth Marketing", "Digital Strategy", "Analytics", "Team Leadership"],
-      featured: false,
-      remote: false,
-      logo: "GP",
-      urgent: false
-    },
-    {
-      id: "6",
-      title: "DevOps Engineer",
-      company: "CloudTech Inc",
-      industry: "Technology",
-      location: "Remote",
-      type: "Full-time",
-      salary: "$125,000 - $155,000",
-      posted: "5 days ago",
-      applicants: 15,
-      description: "Build and maintain cloud infrastructure for our high-scale applications...",
-      tags: ["Docker", "Kubernetes", "AWS", "CI/CD"],
-      featured: true,
-      remote: true,
-      logo: "CT",
-      urgent: false
-    },
-    {
-      id: "7",
-      title: "Frontend Developer",
-      company: "Web Solutions",
-      industry: "Technology",
-      location: "Chicago, IL",
-      type: "Full-time",
-      salary: "$90,000 - $120,000",
-      posted: "6 days ago",
-      applicants: 31,
-      description: "Build responsive web applications using modern frontend technologies...",
-      tags: ["React", "Vue.js", "CSS", "JavaScript"],
-      featured: false,
-      remote: true,
-      logo: "WS",
-      urgent: false
-    },
-    {
-      id: "8",
-      title: "Sales Manager",
-      company: "Business Growth Co",
-      industry: "Sales",
-      location: "Miami, FL",
-      type: "Full-time",
-      salary: "$80,000 - $110,000",
-      posted: "1 week ago",
-      applicants: 24,
-      description: "Drive sales growth and manage key client relationships...",
-      tags: ["B2B Sales", "CRM", "Negotiation", "Team Management"],
-      featured: false,
-      remote: false,
-      logo: "BG",
-      urgent: true
-    },
-    {
-      id: "9",
-      title: "Backend Engineer",
-      company: "Server Systems",
-      industry: "Technology",
-      location: "Denver, CO",
-      type: "Full-time",
-      salary: "$110,000 - $140,000",
-      posted: "3 days ago",
-      applicants: 17,
-      description: "Develop scalable backend systems and APIs for high-traffic applications...",
-      tags: ["Node.js", "PostgreSQL", "Redis", "Microservices"],
-      featured: false,
-      remote: true,
-      logo: "SS",
-      urgent: false
-    },
-    {
-      id: "10",
-      title: "UI/UX Designer",
-      company: "Creative Agency",
-      industry: "Design",
-      location: "Portland, OR",
-      type: "Contract",
-      salary: "$70,000 - $95,000",
-      posted: "2 days ago",
-      applicants: 38,
-      description: "Design intuitive user interfaces and experiences for digital products...",
-      tags: ["Sketch", "Adobe XD", "User Testing", "Wireframing"],
-      featured: false,
-      remote: true,
-      logo: "CA",
-      urgent: false
-    },
-    {
-      id: "11",
-      title: "Machine Learning Engineer",
-      company: "AI Innovations",
-      industry: "Technology",
-      location: "Boston, MA",
-      type: "Full-time",
-      salary: "$160,000 - $200,000",
-      posted: "1 day ago",
-      applicants: 12,
-      description: "Build and deploy machine learning models at scale...",
-      tags: ["Python", "TensorFlow", "PyTorch", "MLOps"],
-      featured: true,
-      remote: true,
-      logo: "AI",
-      urgent: true
-    },
-    {
-      id: "12",
-      title: "Project Manager",
-      company: "Enterprise Solutions",
-      industry: "Management",
-      location: "Atlanta, GA",
-      type: "Full-time",
-      salary: "$95,000 - $125,000",
-      posted: "1 week ago",
-      applicants: 26,
-      description: "Manage complex projects and coordinate cross-functional teams...",
-      tags: ["PMP", "Agile", "Scrum", "Risk Management"],
-      featured: false,
-      remote: false,
-      logo: "ES",
-      urgent: false
-    }
-  ];
-
   const industries = ["Technology", "Design", "Marketing", "Sales", "Management", "Healthcare", "Finance", "Education"];
   const locations = ["San Francisco, CA", "New York, NY", "Austin, TX", "Seattle, WA", "Los Angeles, CA", "Remote", "Chicago, IL", "Miami, FL", "Denver, CO", "Portland, OR", "Boston, MA", "Atlanta, GA"];
   const jobTypes = ["Full-time", "Part-time", "Contract", "Internship"];
 
-  const filteredJobs = allJobs.filter(job => {
-    const matchesSearch = searchTerm === "" || 
-      job.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      job.company.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      job.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesIndustry = selectedIndustry === "all" || job.industry === selectedIndustry;
-    const matchesLocation = selectedLocation === "all" || job.location === selectedLocation;
-    const matchesType = selectedType === "all" || job.type === selectedType;
-    
+  const filteredJobs = allJobs.filter((job) => {
+    const q = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      q === "" ||
+      job.title.toLowerCase().includes(q) ||
+      job.company.toLowerCase().includes(q) ||
+      job.description.toLowerCase().includes(q) ||
+      job.tags.some((t) => t.toLowerCase().includes(q));
+
+    const matchesIndustry =
+      selectedIndustry === "all" ||
+      (job.industry ?? "").toLowerCase() === selectedIndustry.toLowerCase();
+
+    const matchesLocation =
+      selectedLocation === "all" ||
+      (job.location ?? "").toLowerCase() === selectedLocation.toLowerCase();
+
+    const matchesType =
+      selectedType === "all" ||
+      (job.type ?? "").toLowerCase() === selectedType.toLowerCase();
+
     return matchesSearch && matchesIndustry && matchesLocation && matchesType;
   });
+
 
   // Sort jobs
   const sortedJobs = [...filteredJobs].sort((a, b) => {
     switch (sortBy) {
-      case "salary":
-        return parseInt(b.salary.split(" - ")[1].replace(/[^0-9]/g, "")) - parseInt(a.salary.split(" - ")[1].replace(/[^0-9]/g, ""));
+      case "salary": {
+        // salary is already a display string; sort by trailing number if present
+        const ax = parseInt((a.salary.match(/\d[\d,]*$/)?.[0] || "0").replace(/,/g, ""));
+        const bx = parseInt((b.salary.match(/\d[\d,]*$/)?.[0] || "0").replace(/,/g, ""));
+        return bx - ax;
+      }
       case "applicants":
-        return b.applicants - a.applicants;
+        return (b.applicants ?? 0) - (a.applicants ?? 0);
       case "company":
         return a.company.localeCompare(b.company);
-      default: // newest
-        return new Date(b.posted).getTime() - new Date(a.posted).getTime();
+      default: {
+        // posted like "2 days ago" or a date string; fall back to title if equal
+        return a.posted === b.posted
+          ? a.title.localeCompare(b.title)
+          : b.posted.localeCompare(a.posted);
+      }
     }
   });
+
 
   // Pagination
   const totalPages = Math.ceil(sortedJobs.length / itemsPerPage);
@@ -265,6 +170,21 @@ const Jobs = () => {
 
   const featuredJobs = paginatedJobs.filter(job => job.featured);
   const regularJobs = paginatedJobs.filter(job => !job.featured);
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-slate-600">Loading jobs…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -316,7 +236,7 @@ const Jobs = () => {
                     className="pl-12 text-lg h-14 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
-                
+
                 {/* Filters */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
@@ -388,7 +308,7 @@ const Jobs = () => {
               </p>
             )}
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <span className="text-sm text-slate-600">Sort by:</span>
             <Select value={sortBy} onValueChange={setSortBy}>
@@ -417,7 +337,7 @@ const Jobs = () => {
               <Star className="w-6 h-6 text-blue-500 mr-3" />
               <h2 className="text-2xl font-bold text-slate-900">Featured Opportunities</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {featuredJobs.map((job, index) => (
                 <PremiumCard key={job.id} delay={index * 0.1} variant="executive" className="relative overflow-hidden hover:shadow-blue-glow transition-all duration-300">
@@ -433,7 +353,7 @@ const Jobs = () => {
                       </Badge>
                     )}
                   </div>
-                  
+
                   <CardHeader className="pb-4">
                     <div className="flex items-start space-x-4">
                       <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -471,12 +391,12 @@ const Jobs = () => {
                       </div>
                     </div>
                   </CardHeader>
-                  
+
                   <CardContent>
                     <p className="text-slate-600 text-sm mb-4 line-clamp-2">
                       {job.description}
                     </p>
-                    
+
                     <div className="flex flex-wrap gap-2 mb-6">
                       {job.tags.map((tag) => (
                         <Badge key={tag} variant="secondary" className="text-xs bg-slate-100 text-slate-700">
@@ -484,7 +404,7 @@ const Jobs = () => {
                         </Badge>
                       ))}
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-slate-500 text-sm">
                         <Clock className="w-4 h-4 mr-1" />
@@ -520,7 +440,7 @@ const Jobs = () => {
               <Briefcase className="w-6 h-6 text-slate-600 mr-3" />
               <h2 className="text-2xl font-bold text-slate-900">All Opportunities</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {regularJobs.map((job, index) => (
                 <PremiumCard key={job.id} delay={index * 0.05} variant="executive" className="hover:shadow-blue-glow transition-all duration-300">
@@ -563,12 +483,12 @@ const Jobs = () => {
                       </Button>
                     </div>
                   </CardHeader>
-                  
+
                   <CardContent>
                     <p className="text-slate-600 text-sm mb-4 line-clamp-2">
                       {job.description}
                     </p>
-                    
+
                     <div className="flex flex-wrap gap-1 mb-4">
                       {job.tags.slice(0, 3).map((tag) => (
                         <Badge key={tag} variant="secondary" className="text-xs bg-slate-100 text-slate-700">
@@ -581,7 +501,7 @@ const Jobs = () => {
                         </Badge>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4 text-slate-500 text-xs">
                         <span className="flex items-center">
@@ -618,7 +538,7 @@ const Jobs = () => {
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
-                  <PaginationPrevious 
+                  <PaginationPrevious
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
@@ -627,7 +547,7 @@ const Jobs = () => {
                     className={currentPage === 1 ? "pointer-events-none opacity-50" : "text-slate-700 hover:text-blue-600"}
                   />
                 </PaginationItem>
-                
+
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <PaginationItem key={page}>
                     <PaginationLink
@@ -643,9 +563,9 @@ const Jobs = () => {
                     </PaginationLink>
                   </PaginationItem>
                 ))}
-                
+
                 <PaginationItem>
-                  <PaginationNext 
+                  <PaginationNext
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
