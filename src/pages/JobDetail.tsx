@@ -5,55 +5,193 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Building, DollarSign, Clock, Bookmark, Share2, ArrowLeft, Users, Calendar, Briefcase, Star, Heart } from "lucide-react";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { getPublicJob, Job } from "@/services/jobService";
+import { getAccessToken } from "@/services/userservice/auth";
+import { SweetAlert } from "@/components/ui/SweetAlert";
+type AlertVariant = "warning" | "success" | "info" | "error";
+
+type UIJob = {
+  id: string;
+  title: string;
+  company: string;
+  industry: string | null;
+  location: string | null;
+  salary: string;
+  type: string;
+  posted: string;
+  applicants: number;
+  description: string;
+  requirements: string[];
+  responsibilities: string[];
+  benefits: string[];
+  tags: string[];
+  remote: boolean;
+  featured: boolean;
+  urgent: boolean;
+  logo: string;
+};
+
+const timeAgo = (iso?: string | null) => {
+  if (!iso) return "";
+  const then = new Date(iso).getTime();
+  const now = Date.now();
+  const diff = Math.max(0, now - then);
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 14) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
+};
+
+const toUIJob = (j: Job): UIJob => {
+  const salary =
+    j.salary_min && j.salary_max
+      ? `$${j.salary_min.toLocaleString()} - $${j.salary_max.toLocaleString()}`
+      : "—";
+
+  // backend doesn't return company name; derive a short, readable label
+  const companyShort = j.company_id ? `Company ${j.company_id.slice(0, 6)}` : "Company";
+
+  const logo = (j.title || companyShort)
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return {
+    id: j.id,
+    title: j.title,
+    company: companyShort,
+    industry: j.industry ?? null,
+    location: j.location ?? null,
+    salary,
+    type: j.job_type,
+    posted: timeAgo(j.posted_at ?? j.created_at),
+    applicants: 0,
+    description: j.description,
+    requirements: j.requirements ?? [],
+    responsibilities: j.responsibilities ?? [],
+    benefits: j.benefits ?? [],
+    tags: j.tags ?? [],
+    remote: !!j.remote,
+    featured: !!j.featured,
+    urgent: !!j.urgent,
+    logo,
+  };
+};
+
+// right under your imports
 
 const JobDetail = () => {
   const { jobId } = useParams();
   const navigate = useNavigate();
+  const [job, setJob] = useState<UIJob | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [alert, setAlert] = useState({
+    open: false,
+    title: "Please login to continue",
+    message: "You need to be logged in as an applicant to quick apply.",
+    variant: "warning" as const,   // ✅ now matches SweetAlert type
+  });
+
+  // const closeAlert = () => {
+  //   setAlert((a) => ({ ...a, open: false }));
+
+  //   // Build a login URL that carries where to go after login
+  //   const params = new URLSearchParams({
+  //     redirect: "/interview",     // where to go after login
+  //     jobId: job?.id ?? "",        // pass job id
+  //     intent: "quick-apply",
+  //     role: "applicant",           // hint your login which role
+  //   });
+
+  //   navigate(`/login?${params.toString()}`, { replace: true });
+  // };
+
+  const closeAlert = () => {
+    setAlert(a => ({ ...a, open: false }));
+    const params = new URLSearchParams({
+      redirect: "/interview",
+      jobId: job?.id ?? "",
+      intent: "quick-apply",
+      role: "applicant",
+    });
+    navigate(`/login?${params.toString()}`, { replace: true });
+  };
+  
+  useEffect(() => {
+    if (!jobId) {
+      setError("Missing job id.");
+      setLoading(false);
+      return;
+    }
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const apiJob = await getPublicJob(jobId);
+        setJob(toUIJob(apiJob));
+      } catch (e: any) {
+        setError(e?.message || "Failed to load job.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [jobId]);
+
+  // const handleQuickApply = () => {
+  //   const token = getAccessToken();
+
+  //   if (!token) {
+  //     setAlert({
+  //       open: true,
+  //       title: "Please login to continue",
+  //       message: "You need to be logged in as an applicant to quick apply.",
+  //       variant: "warning",
+  //     });
+  //     return;
+  //   }
+
+  //   // already logged in – proceed
+  //   if (!job) return;
+  //   navigate("/interview", { state: { job } });
+  // };
   const handleQuickApply = () => {
-    // pass the whole job object to the interview page
+    const token = getAccessToken();
+    if (!token) {
+      setAlert(a => ({ ...a, open: true }));   // use existing warning styling
+      return;
+    }
+    if (!job) return;
     navigate("/interview", { state: { job } });
   };
-  // Mock job data - in real app, this would come from API
-  const job = {
-    id: jobId,
-    title: "Senior Software Engineer",
-    company: "TechCorp Inc.",
-    industry: "Technology",
-    location: "San Francisco, CA",
-    salary: "$120,000 - $160,000",
-    type: "Full-time",
-    posted: "2 days ago",
-    applicants: 34,
-    description: "We are looking for a Senior Software Engineer to join our growing team. You will be responsible for designing, developing, and maintaining scalable web applications using modern technologies like React, Node.js, and cloud platforms.",
-    requirements: [
-      "5+ years of experience in software development",
-      "Strong knowledge of JavaScript, React, and Node.js",
-      "Experience with cloud platforms (AWS, GCP, or Azure)",
-      "Bachelor's degree in Computer Science or related field",
-      "Experience with agile development methodologies",
-      "Strong problem-solving and communication skills"
-    ],
-    responsibilities: [
-      "Design and develop scalable web applications",
-      "Collaborate with cross-functional teams to define and implement new features",
-      "Mentor junior developers and conduct code reviews",
-      "Participate in technical discussions and architectural decisions",
-      "Optimize application performance and scalability",
-      "Stay up-to-date with emerging technologies and industry trends"
-    ],
-    benefits: [
-      "Competitive salary and equity package",
-      "Comprehensive health, dental, and vision insurance",
-      "Flexible work arrangements and remote options",
-      "Professional development budget ($3,000/year)",
-      "Unlimited PTO policy",
-      "State-of-the-art equipment and workspace"
-    ],
-    tags: ["React", "Node.js", "TypeScript", "AWS", "PostgreSQL"],
-    remote: true,
-    featured: true,
-    urgent: false
-  };
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-slate-600">Loading job…</p>
+      </div>
+    );
+  }
+
+  if (error || !job) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error || "Job not found."}</p>
+          <Button onClick={() => navigate(-1)} variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -89,7 +227,9 @@ const JobDetail = () => {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-4">
                         <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center">
-                          <span className="text-blue-600 font-bold text-xl">TC</span>
+                          {/* <span className="text-blue-600 font-bold text-xl">TC</span> */}
+                          <span className="text-blue-600 font-bold text-xl">{job.logo}</span>
+
                         </div>
                         <div>
                           <CardTitle className="text-3xl mb-2 text-slate-900">{job.title}</CardTitle>
@@ -281,6 +421,17 @@ const JobDetail = () => {
                 </CardContent>
               </Card>
             </motion.div>
+            <SweetAlert
+              open={alert.open}
+              title={alert.title}
+              message={alert.message}
+              variant={alert.variant}                
+              confirmText="Take me to login"         
+              onConfirm={closeAlert}                 
+              onClose={() => setAlert(a => ({ ...a, open: false }))} // ✕ just closes
+            />
+
+
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}

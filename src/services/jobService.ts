@@ -39,3 +39,14 @@ export async function getPublicJobs(page = 1): Promise<Job[]> {
 
   return res.json();
 }
+
+export async function getPublicJob(id: string): Promise<Job> {
+    const res = await fetch(`${getApiUrl()}/jobs/${id}`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Job fetch failed: ${res.status} ${text}`);
+    }
+    return res.json();
+  }

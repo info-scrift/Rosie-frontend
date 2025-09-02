@@ -187,7 +187,7 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 mt-10">
       <div className="max-w-7xl mx-auto container-padding py-12">
         {/* Header */}
         <motion.div

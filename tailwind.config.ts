@@ -8,6 +8,8 @@ const config: Config = {
     "./components/**/*.{ts,tsx}",
     "./app/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
+    "./src/components/ui/**/*.{ts,tsx}",   
+
   ],
   prefix: "",
   theme: {
@@ -136,6 +138,20 @@ const config: Config = {
         md: "0.5rem",
         sm: "0.375rem",
       },
+      safelist: [
+        // SweetAlert button + focus rings
+        "bg-amber-600","hover:bg-amber-700","focus:ring-amber-500",
+        "bg-blue-600","hover:bg-blue-700","focus:ring-blue-500",
+        "bg-green-600","hover:bg-green-700","focus:ring-green-500",
+        "bg-red-600","hover:bg-red-700","focus:ring-red-500",
+        "text-white",
+    
+        // SweetAlert icon/title colors
+        "text-amber-600","text-amber-700",
+        "text-blue-600","text-blue-700",
+        "text-green-600","text-green-700",
+        "text-red-600","text-red-700",
+      ],
       spacing: {
         '18': '4.5rem',
         '88': '22rem',
