@@ -47,10 +47,10 @@ const variantClasses: Record<
     ring: "focus:ring-blue-500",
   },
   warning: {
-    icon: "text-amber-600",
-    title: "text-amber-700",
-    button: "bg-amber-600 hover:bg-amber-700 text-white",
-    ring: "focus:ring-amber-500",
+    icon: "text-red-600",
+    title: "text-red-700",
+    button: "bg-red-600 hover:bg-red-700 text-white",
+    ring: "focus:ring-red-500",
   },
 };
 
@@ -89,7 +89,7 @@ export const SweetAlert: React.FC<SweetAlertProps> = ({
         <button
           aria-label="Close"
           onClick={onClose}
-          className="absolute left-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400"
+          className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400"
         >
           <X className="w-4 h-4" />
         </button>

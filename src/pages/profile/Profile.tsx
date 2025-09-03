@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { uploadApplicantResume } from "@/services/userservice/applicant";
 import { Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom"; 
 import {
   User,
   Mail,
@@ -217,10 +218,22 @@ const ProfilePage = () => {
   useEffect(() => {
     (async () => {
       try {
-        const data: ProfileResponse = await getApplicantProfile(); // returns { profile }
-        setProfile(data.profile);
+        const data: ProfileResponse | { profile: null } = await getApplicantProfile();
+        if (!data || !data.profile) {
+          // Option A: show CTA (no redirect)
+          setProfile(null);
+
+          // Option B (optional): auto-redirect them to edit with ensure flow
+          // navigate("/profile/edit?create=1");
+        } else {
+          setProfile(data.profile);
+        }
       } catch (e) {
         console.error("Error fetching profile:", e);
+        // Fallback: treat as empty profile
+        setProfile(null);
+        // Or auto-redirect:
+        // navigate("/profile/edit?create=1");
       } finally {
         setLoading(false);
       }
@@ -233,16 +246,21 @@ const ProfilePage = () => {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-24 sm:pb-28 my-8 sm:my-10">
         <div className="text-center py-16 sm:py-20 text-gray-600">
-          No profile found.
-          <div className="mt-4">
-            <Link to="/profile/edit">
-              <Button variant="outline">Create / Edit Profile</Button>
+          <div className="text-xl mb-2">You haven’t completed your profile yet.</div>
+          <div className="text-sm mb-6">Create your profile to apply faster and get better matches.</div>
+          <div className="mt-2 flex items-center justify-center gap-3">
+            <Link to="/profile/edit?create=1">
+              <Button>Complete My Profile</Button>
+            </Link>
+            <Link to="/jobs">
+              <Button variant="outline">Browse Jobs</Button>
             </Link>
           </div>
         </div>
       </div>
     );
   }
+
 // Safe to read because we know `profile` exists here
 const basePhoto = profile.photo_url ?? null;
 const imgSrc = basePhoto

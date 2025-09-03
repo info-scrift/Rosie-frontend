@@ -10,6 +10,9 @@ import { updateApplicantProfileApi } from "@/services/userservice/applicant";
 import { SweetAlert } from "@/components/ui/SweetAlert";
 import { ProfessionalCard } from "@/components/ui/professional-card";
 import { Link, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { ensureApplicantProfile } from "@/services/userservice/applicant";
+
 import {
   User,
   Briefcase,
@@ -45,20 +48,21 @@ const mapExperienceYearsToLabel = (n?: number | null): string => {
 const EditProfile = () => {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@email.com",
-    phone: "+1 (555) 123-4567",
-    location: "San Francisco, CA",
-    title: "Senior Software Engineer",
-    company: "TechCorp Solutions", // not provided by API; remains local
-    bio: "Passionate full-stack developer with 8+ years of experience building scalable web applications. Expert in React, Node.js, and cloud technologies.",
-    experience: "8+ years", // mapped from experience_years
-    education: "B.S. Computer Science, Stanford University", // not provided by API; remains local
-    website: "https://johndoe.dev", // maps from Portfolio_link
-    linkedin: "https://linkedin.com/in/johndoe", // maps from Linkedin_Profile
-    github: "https://github.com/johndoe", // not provided by API; remains local
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    location: "",
+    title: "",
+    company: "",   // local-only
+    bio: "",
+    experience: "", // map from experience_years if present
+    education: "",  // local-only
+    website: "",
+    linkedin: "",
+    github: "",     // local-only
   });
+
   // photo state for edit page
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoVersion, setPhotoVersion] = useState(0); // bust cache after upload
@@ -86,6 +90,11 @@ const EditProfile = () => {
   ]);
   const [newSkill, setNewSkill] = useState("");
   const [activeTab, setActiveTab] = useState("basic");
+
+// read ?create=1 from the URL
+const location = useLocation();
+const params = new URLSearchParams(location.search);
+const shouldCreate = params.get("create") === "1";
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -136,62 +145,149 @@ const EditProfile = () => {
   const removeSkill = (skillToRemove: string) => {
     setSkills(skills.filter((skill) => skill !== skillToRemove));
   };
+  // const loadProfile = async (ensure: boolean = shouldCreate) => {
+  //   setLoading(true);
+  //   setError(null);
+  //   try {
+  //     // decide which API to call based on the query param
+  //     let p: any | null = null;
 
-  // ---- fetch & map data from API ----
-  const loadProfile = async () => {
+  //     if (ensure) {
+  //       // POST to create-if-missing
+  //       const { profile } = await ensureApplicantProfile();
+  //       p = profile || null;
+  //       // Optional nudge: if we just ensured and fields are empty, prompt the user to complete the profile
+  //       if (p && (!p.first_name || !p.last_name || !Array.isArray(p.skills))) {
+  //         setAlert({
+  //           open: true,
+  //           title: "Let’s complete your profile",
+  //           message: "We created your profile record. Please fill in your details and save.",
+  //           variant: "warning",
+  //         });
+  //       }
+  //     } else {
+  //       // regular GET
+  //       const data = await getApplicantProfile(); // expected: { profile: {...} }
+  //       p = data?.profile || null;
+  //     }
+
+  //     if (!p) {
+  //       setError("Profile not found.");
+  //       setLoading(false);
+  //       return;
+  //     }
+
+  //     // avatar state
+  //     setPhotoUrl(p.photo_url ?? null);
+  //     setPhotoVersion((v) => v + 1);
+  //     setImgError(false);
+
+  //     // map API -> UI fields
+  //     setProfileData({
+  //       firstName: p.first_name ?? "",
+  //       lastName: p.last_name ?? "",
+  //       email: p.email ?? "",
+  //       phone: p.phone ?? "",
+  //       location: p.address ?? "",
+  //       title: p.Curent_Job_Title ?? "",
+  //       company: "", // not in API
+  //       bio: p.Professional_Bio ?? "",
+  //       experience: mapExperienceYearsToLabel(p.experience_years),
+  //       education: "", // not in API
+  //       website: p.Portfolio_link ?? "",
+  //       linkedin: p.Linkedin_Profile ?? "",
+  //       github: "", // not in API
+  //     });
+
+  //     // skills
+  //     if (Array.isArray(p.skills)) {
+  //       setSkills(p.skills);
+  //     } else {
+  //       setSkills([]);
+  //     }
+  //   } catch (e: any) {
+  //     console.error("Error fetching/ensuring profile:", e);
+  //     setError(typeof e?.message === "string" ? e.message : "Failed to load profile. Please try again.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+
+  const loadProfile = async (ensure: boolean = shouldCreate) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getApplicantProfile(); // expected: { profile: {...} }
-      const p = data?.profile;
-
+      let p: any | null = null;
+  
+      if (ensure) {
+        // Ensure/create minimal row
+        const { profile } = await ensureApplicantProfile();
+        p = profile || null;
+  
+        if (p && (!p.first_name || !p.last_name || !Array.isArray(p.skills))) {
+          setAlert({
+            open: true,
+            title: "Let’s complete your profile",
+            message: "We created your profile record. Please fill in your details and save.",
+            variant: "warning",
+          });
+        }
+      } else {
+        // Regular GET
+        const data = await getApplicantProfile();
+        p = data?.profile || null;
+  
+        // If still no profile, auto-switch to ensure flow once:
+        if (!p) {
+          const ensured = await ensureApplicantProfile();
+          p = ensured.profile || null;
+        }
+      }
+  
+      // If after both attempts there's still no profile, show empty form
       if (!p) {
-        setError("Profile not found.");
-        setLoading(false);
+        setProfileData(prev => ({ ...prev })); // keep blanks
+        setSkills([]);                          // empty skills
         return;
       }
+  
+      // Photo (if any)
       setPhotoUrl(p.photo_url ?? null);
-      setPhotoVersion((v) => v + 1); // force a fresh render when page opens
+      setPhotoVersion(v => v + 1);
       setImgError(false);
-
+  
+      // Map API -> local UI fields (prefill what we have)
       setProfileData({
         firstName: p.first_name ?? "",
         lastName: p.last_name ?? "",
         email: p.email ?? "",
         phone: p.phone ?? "",
         location: p.address ?? "",
-        title: p.Curent_Job_Title ?? "", // API uses 'Curent_Job_Title'
-        company: "", // not in API
+        title: p.Curent_Job_Title ?? "",
+        company: "", // local-only
         bio: p.Professional_Bio ?? "",
         experience: mapExperienceYearsToLabel(p.experience_years),
-        education: "", // not in API
+        education: "",               // local-only
         website: p.Portfolio_link ?? "",
         linkedin: p.Linkedin_Profile ?? "",
-        github: "", // not in API
+        github: "",                  // local-only
       });
-
-      if (Array.isArray(p.skills)) {
-        setSkills(p.skills);
-      } else {
-        setSkills([]);
-      }
+  
+      setSkills(Array.isArray(p.skills) ? p.skills : []);
     } catch (e: any) {
-      console.error("Error fetching profile:", e);
-      setError(
-        typeof e?.message === "string"
-          ? e.message
-          : "Failed to load profile. Please try again."
-      );
+      console.error("Error fetching/ensuring profile:", e);
+      setError(typeof e?.message === "string" ? e.message : "Failed to load profile. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     loadProfile();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [shouldCreate]);
 
   const tabs = [
     { id: "basic", label: "Basic Info", icon: User },
@@ -215,9 +311,10 @@ const EditProfile = () => {
       <div className="max-w-4xl mx-auto container-padding py-8 space-y-8">
         <div className="text-center py-10">
           <div className="mb-4 text-red-600">{error}</div>
-          <Button variant="outline" onClick={loadProfile}>
-            Retry
-          </Button>
+          <Button variant="outline" onClick={() => loadProfile()}>
+  Retry
+</Button>
+
         </div>
       </div>
     );
@@ -317,7 +414,7 @@ const EditProfile = () => {
       <ProfessionalCard variant="executive">
         <CardContent className="p-8">
           <div className="flex items-center space-x-8">
-            
+
             <div className="w-32 h-32 rounded-full overflow-hidden bg-blue-100 ring-2 ring-white">
               {photoUrl && !imgError ? (
                 <img
@@ -346,7 +443,7 @@ const EditProfile = () => {
               <p className="text-lg text-muted-foreground mb-4">
                 {profileData.title}
               </p>
-              
+
               <Button
                 type="button"
                 variant="outline"

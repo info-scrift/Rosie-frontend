@@ -1,23 +1,45 @@
 // services/userservice/applicant.ts
 import { getAccessToken } from "@/services/userservice/auth";
 import { getApiUrl } from "@/utils/getUrl";
-export async function getApplicantProfile() {
-
+import type { ApplicantProfile } from "@/types/applicanttype";
+export async function ensureApplicantProfile(): Promise<{ profile: ApplicantProfile }> {
+  const token = getAccessToken();
+  const res = await fetch(`${getApiUrl()}/applicant/profile/ensure`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token ?? ""}`,
+    },
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const msg = await res.text().catch(() => "");
+    throw new Error(msg || `Failed to ensure profile: ${res.status}`);
+  }
+  return res.json();
+}
+// services/userservice/applicant.ts
+export async function getApplicantProfile(): Promise<{ profile: any | null }> {
   const token = getAccessToken();
   const res = await fetch(`${getApiUrl()}/applicant/profile`, {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token ?? ""}`,
     },
-    credentials: "include", // optional—remove if you don’t use cookies
+    credentials: "include",
   });
-  console.log(res)
+
+  // Gracefully interpret 404 as "no profile yet"
+  if (res.status === 404) {
+    return { profile: null };
+  }
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Profile fetch failed: ${res.status} ${text}`);
   }
-  return res.json(); // shape depends on your backend
+  return res.json(); // { profile } | { profile: null }
 }
+
 export async function updateApplicantProfileApi(payload: {
   first_name?: string;
   last_name?: string;
@@ -152,3 +174,4 @@ export async function uploadApplicantPhoto(file: File): Promise<UploadApplicantP
   }
   return res.json();
 }
+
