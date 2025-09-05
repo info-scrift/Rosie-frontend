@@ -25,3 +25,24 @@ export type ApplicantProfile = {
     created_at?: string | null;
   };
   
+  export type GetApplicantProfileResp = {
+    profile: ApplicantProfile | null;
+    seed?: {
+      email?: string;
+     
+    };
+  };
+
+  export type EnsureSeed = {
+    id: string;
+    email?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+  };
+  
+  export type EnsureApplicantProfileResp = {
+    exists: boolean;
+    profile: ApplicantProfile | null;   // null when not present
+    seed?: EnsureSeed;                  // only when exists === false
+  };
+  

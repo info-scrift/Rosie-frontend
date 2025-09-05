@@ -12,7 +12,7 @@ import { ProfessionalCard } from "@/components/ui/professional-card";
 import { Link, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { ensureApplicantProfile } from "@/services/userservice/applicant";
-
+import { createApplicantProfileApi } from "@/services/userservice/applicant";
 import {
   User,
   Briefcase,
@@ -32,6 +32,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getApplicantProfile, uploadApplicantPhoto } from "@/services/userservice/applicant";
+const getEmailFromToken = (): string | null => {
+  const candidates = [
+    localStorage.getItem("access_token"),
+    localStorage.getItem("token"),
+    sessionStorage.getItem("access_token"),
+    sessionStorage.getItem("token"),
+  ].filter(Boolean) as string[];
+
+  for (const tok of candidates) {
+    try {
+      const jwt = tok.startsWith("Bearer ") ? tok.slice(7) : tok;
+      const [, payloadB64] = jwt.split(".");
+      if (!payloadB64) continue;
+      const norm = payloadB64.replace(/-/g, "+").replace(/_/g, "/");
+      const json = JSON.parse(atob(norm));
+      const email =
+        json?.email ??
+        json?.user_email ??
+        (json?.preferred_username?.includes("@") ? json.preferred_username : null);
+      if (email && typeof email === "string") return email;
+    } catch {}
+  }
+  return null;
+};
 
 
 // ---- helpers ----
@@ -44,6 +68,17 @@ const mapExperienceYearsToLabel = (n?: number | null): string => {
   if (n >= 2) return "2-3 years";
   return "0-1 years";
 };
+// full-screen loading overlay
+const BlockingLoader = ({ visible }: { visible: boolean }) =>
+  !visible ? null : (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-white/80 backdrop-blur-sm">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <p className="text-slate-700 font-medium">Loading your profile…</p>
+      </div>
+    </div>
+  );
+
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -69,6 +104,7 @@ const EditProfile = () => {
   const [imgError, setImgError] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const openPhotoPicker = () => photoInputRef.current?.click();
   const [alert, setAlert] = useState<{
     open: boolean;
@@ -91,10 +127,10 @@ const EditProfile = () => {
   const [newSkill, setNewSkill] = useState("");
   const [activeTab, setActiveTab] = useState("basic");
 
-// read ?create=1 from the URL
-const location = useLocation();
-const params = new URLSearchParams(location.search);
-const shouldCreate = params.get("create") === "1";
+  // read ?create=1 from the URL
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const shouldCreate = params.get("create") === "1";
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -170,10 +206,17 @@ const shouldCreate = params.get("create") === "1";
   //       const data = await getApplicantProfile(); // expected: { profile: {...} }
   //       p = data?.profile || null;
   //     }
-
   //     if (!p) {
-  //       setError("Profile not found.");
-  //       setLoading(false);
+  //       setPhotoUrl(null);
+  //       setSkills([]);
+  //       setImgError(false);
+      
+  //       // Prefill from token if nothing from server
+  //       const tokenEmail = getEmailFromToken();
+  //       setProfileData(prev => ({
+  //         ...prev,
+  //         email: prev.email || tokenEmail || "",
+  //       }));
   //       return;
   //     }
 
@@ -183,20 +226,28 @@ const shouldCreate = params.get("create") === "1";
   //     setImgError(false);
 
   //     // map API -> UI fields
-  //     setProfileData({
-  //       firstName: p.first_name ?? "",
-  //       lastName: p.last_name ?? "",
-  //       email: p.email ?? "",
-  //       phone: p.phone ?? "",
-  //       location: p.address ?? "",
-  //       title: p.Curent_Job_Title ?? "",
-  //       company: "", // not in API
-  //       bio: p.Professional_Bio ?? "",
-  //       experience: mapExperienceYearsToLabel(p.experience_years),
-  //       education: "", // not in API
-  //       website: p.Portfolio_link ?? "",
-  //       linkedin: p.Linkedin_Profile ?? "",
-  //       github: "", // not in API
+  //     setProfileData(prev => {
+  //       const mapped = {
+  //         firstName: p.first_name ?? "",
+  //         lastName: p.last_name ?? "",
+  //         email: p.email ?? "",
+  //         phone: p.phone ?? "",
+  //         location: p.address ?? "",
+  //         title: p.Curent_Job_Title ?? "",
+  //         company: "",
+  //         bio: p.Professional_Bio ?? "",
+  //         experience: mapExperienceYearsToLabel(p.experience_years),
+  //         education: "",
+  //         website: p.Portfolio_link ?? "",
+  //         linkedin: p.Linkedin_Profile ?? "",
+  //         github: "",
+  //       };
+      
+  //       if (!mapped.email) {
+  //         const tokenEmail = getEmailFromToken();
+  //         mapped.email = prev.email || tokenEmail || "";
+  //       }
+  //       return mapped;
   //     });
 
   //     // skills
@@ -212,77 +263,117 @@ const shouldCreate = params.get("create") === "1";
   //     setLoading(false);
   //   }
   // };
-
-
-  const loadProfile = async (ensure: boolean = shouldCreate) => {
+  const loadProfile = async (ensureCheck: boolean = shouldCreate) => {
     setLoading(true);
-    setError(null);
+    setError(null); // keep but don't render it anywhere
     try {
       let p: any | null = null;
+      let exists = false;
+      let seed: any = null;
   
-      if (ensure) {
-        // Ensure/create minimal row
-        const { profile } = await ensureApplicantProfile();
-        p = profile || null;
-  
-        if (p && (!p.first_name || !p.last_name || !Array.isArray(p.skills))) {
-          setAlert({
-            open: true,
-            title: "Let’s complete your profile",
-            message: "We created your profile record. Please fill in your details and save.",
-            variant: "warning",
-          });
-        }
+      if (ensureCheck) {
+        const resp = await ensureApplicantProfile(); // { exists, profile?, seed? }
+        exists = !!resp.exists;
+        p = resp.profile || null;
+        seed = resp.seed || null;
       } else {
-        // Regular GET
-        const data = await getApplicantProfile();
+        const data = await getApplicantProfile(); // { profile: ... | null }
         p = data?.profile || null;
-  
-        // If still no profile, auto-switch to ensure flow once:
-        if (!p) {
-          const ensured = await ensureApplicantProfile();
-          p = ensured.profile || null;
-        }
+        exists = !!p;
       }
   
-      // If after both attempts there's still no profile, show empty form
+      setHasProfile(exists);
+  
       if (!p) {
-        setProfileData(prev => ({ ...prev })); // keep blanks
-        setSkills([]);                          // empty skills
-        return;
+        // — Empty state, keep UI visible & prefill from token/seed
+        setPhotoUrl(null);
+        setImgError(false);
+        setSkills([]);
+  
+        const tokenEmail = getEmailFromToken();
+        setProfileData(prev => ({
+          ...prev,
+          firstName: seed?.first_name ?? "",
+          lastName: seed?.last_name ?? "",
+          email: prev.email || seed?.email || tokenEmail || "",
+          phone: "",
+          location: "",
+          title: "",
+          company: "",
+          bio: "",
+          experience: "",
+          education: "",
+          website: "",
+          linkedin: "",
+          github: "",
+        }));
+        // no alert — banner handles guidance
+      } else {
+        // — Normal mapping
+        setPhotoUrl(p.photo_url ?? null);
+        setPhotoVersion(v => v + 1);
+        setImgError(false);
+  
+        setProfileData(prev => {
+          const mapped = {
+            firstName: p.first_name ?? "",
+            lastName: p.last_name ?? "",
+            email: p.email ?? "",
+            phone: p.phone ?? "",
+            location: p.address ?? "",
+            title: p.Curent_Job_Title ?? "",
+            company: "",
+            bio: p.Professional_Bio ?? "",
+            experience: mapExperienceYearsToLabel(p.experience_years),
+            education: "",
+            website: p.Portfolio_link ?? "",
+            linkedin: p.Linkedin_Profile ?? "",
+            github: "",
+          };
+          if (!mapped.email) {
+            const tokenEmail = getEmailFromToken();
+            mapped.email = prev.email || tokenEmail || "";
+          }
+          return mapped;
+        });
+  
+        setSkills(Array.isArray(p.skills) ? p.skills : []);
       }
-  
-      // Photo (if any)
-      setPhotoUrl(p.photo_url ?? null);
-      setPhotoVersion(v => v + 1);
-      setImgError(false);
-  
-      // Map API -> local UI fields (prefill what we have)
-      setProfileData({
-        firstName: p.first_name ?? "",
-        lastName: p.last_name ?? "",
-        email: p.email ?? "",
-        phone: p.phone ?? "",
-        location: p.address ?? "",
-        title: p.Curent_Job_Title ?? "",
-        company: "", // local-only
-        bio: p.Professional_Bio ?? "",
-        experience: mapExperienceYearsToLabel(p.experience_years),
-        education: "",               // local-only
-        website: p.Portfolio_link ?? "",
-        linkedin: p.Linkedin_Profile ?? "",
-        github: "",                  // local-only
-      });
-  
-      setSkills(Array.isArray(p.skills) ? p.skills : []);
     } catch (e: any) {
       console.error("Error fetching/ensuring profile:", e);
-      setError(typeof e?.message === "string" ? e.message : "Failed to load profile. Please try again.");
+      // Quiet fallback: show empty form + banner
+      setHasProfile(false);
+      setPhotoUrl(null);
+      setImgError(false);
+      setSkills([]);
+  
+      const tokenEmail = getEmailFromToken();
+      setProfileData(prev => ({
+        ...prev,
+        firstName: "",
+        lastName: "",
+        email: prev.email || tokenEmail || "",
+        phone: "",
+        location: "",
+        title: "",
+        company: "",
+        bio: "",
+        experience: "",
+        education: "",
+        website: "",
+        linkedin: "",
+        github: "",
+      }));
+      // Don't surface setAlert or show inline errors
     } finally {
       setLoading(false);
     }
   };
   
+  
+  
+  useEffect(() => { loadProfile(); }, []);
+
   useEffect(() => {
     loadProfile();
 
@@ -295,30 +386,28 @@ const shouldCreate = params.get("create") === "1";
     { id: "skills", label: "Skills", icon: Award },
     // { id: "education", label: "Education", icon: GraduationCap },
   ];
-
-  // ---- loading state (no UI layout changes) ----
-  if (loading) {
+  const isMinimalValid =
+    (profileData.firstName || "").trim() &&
+    (profileData.lastName || "").trim() &&
+    (profileData.phone || "").trim();
+ // Shows the "complete your profile" banner when there's no profile.
+// We do NOT show errors here, and loading is handled by BlockingLoader.
+const InlineState = ({ hasProfile, loading }: { hasProfile: boolean | null; loading: boolean }) => {
+  if (loading) return null; // overlay handles this state
+  if (hasProfile === false) {
     return (
-      <div className="max-w-4xl mx-auto container-padding py-8 space-y-8">
-        <div className="text-center py-10">Loading profile...</div>
-      </div>
-    );
-  }
-
-  // ---- error state (no UI layout changes) ----
-  if (error) {
-    return (
-      <div className="max-w-4xl mx-auto container-padding py-8 space-y-8">
-        <div className="text-center py-10">
-          <div className="mb-4 text-red-600">{error}</div>
-          <Button variant="outline" onClick={() => loadProfile()}>
-  Retry
-</Button>
-
+      <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-900 p-4 mb-4">
+        <div className="font-medium mb-1">Create your applicant profile</div>
+        <div className="text-sm">
+          Start with your <strong>first name</strong>, <strong>last name</strong>, and <strong>phone</strong>. You can add the rest later.
         </div>
       </div>
     );
   }
+  return null;
+};
+
+    
   const mapExperienceLabelToYears = (label?: string): number | null => {
     switch ((label || "").trim()) {
       case "10+ years": return 10;
@@ -331,48 +420,100 @@ const shouldCreate = params.get("create") === "1";
     }
   };
 
+  // const handleSaveAllChanges = async () => {
+  //   try {
+  //     const payload = {
+  //       first_name: profileData.firstName || "",
+  //       last_name: profileData.lastName || "",
+  //       email: profileData.email || "",          // include only if you allow editing email
+  //       phone: profileData.phone || "",
+  //       address: profileData.location || "",
+  //       Professional_Bio: profileData.bio || null,
+  //       Curent_Job_Title: profileData.title || null,
+  //       Portfolio_link: profileData.website || null,
+  //       Linkedin_Profile: profileData.linkedin || null,
+  //       skills: skills ?? [],
+  //       experience_years: mapExperienceLabelToYears(profileData.experience),
+  //     };
+
+  //     await updateApplicantProfileApi(payload);
+
+  //     // optional: success toast / SweetAlert
+  //     // You can reuse your SweetAlert if you add it to this page too
+  //     setAlert({
+  //       open: true,
+  //       title: "Profile updated",
+  //       message: "Your changes have been saved successfully.",
+  //       variant: "success",
+  //     });
+  //   } catch (e: any) {
+  //     console.error(e);
+  //     setAlert({
+  //       open: true,
+  //       title: "Update failed",
+  //       message: typeof e?.message === "string" ? e.message : "Failed to update profile.",
+  //       variant: "error",
+  //     });
+  //   }
+  // };
+
+
+
   const handleSaveAllChanges = async () => {
-    try {
-      const payload = {
-        first_name: profileData.firstName || "",
-        last_name: profileData.lastName || "",
-        email: profileData.email || "",          // include only if you allow editing email
-        phone: profileData.phone || "",
-        address: profileData.location || "",
-        Professional_Bio: profileData.bio || null,
-        Curent_Job_Title: profileData.title || null,
-        Portfolio_link: profileData.website || null,
-        Linkedin_Profile: profileData.linkedin || null,
-        skills: skills ?? [],
-        experience_years: mapExperienceLabelToYears(profileData.experience),
-      };
-
-      await updateApplicantProfileApi(payload);
-
-      // optional: success toast / SweetAlert
-      // You can reuse your SweetAlert if you add it to this page too
+    if (!isMinimalValid) {
       setAlert({
         open: true,
-        title: "Profile updated",
-        message: "Your changes have been saved successfully.",
+        title: "Add the basics",
+        message: "First name, last name, and phone are required.",
+        variant: "warning",
+      });
+      return;
+    }
+
+    const payload = {
+      first_name: profileData.firstName || "",
+      last_name: profileData.lastName || "",
+      email: profileData.email || "",
+      phone: profileData.phone || "",
+      address: profileData.location || "",
+      Professional_Bio: profileData.bio || null,
+      Curent_Job_Title: profileData.title || null,
+      Portfolio_link: profileData.website || null,
+      Linkedin_Profile: profileData.linkedin || null,
+      skills,
+      experience_years: mapExperienceLabelToYears(profileData.experience),
+    };
+
+    try {
+      if (hasProfile) {
+        await updateApplicantProfileApi(payload);           // PUT
+      } else {
+        const { profile } = await createApplicantProfileApi(payload);  // POST
+        setHasProfile(true);
+        // Optionally refresh with getApplicantProfile() to pull server-truth
+      }
+
+      setAlert({
+        open: true,
+        title: "Profile saved",
+        message: "Your changes have been saved.",
         variant: "success",
       });
     } catch (e: any) {
       console.error(e);
       setAlert({
         open: true,
-        title: "Update failed",
-        message: typeof e?.message === "string" ? e.message : "Failed to update profile.",
+        title: "Save failed",
+        message: e?.message || "Could not save your profile.",
         variant: "error",
       });
     }
   };
-
-
-
   return (
 
     <div className="max-w-4xl mx-auto container-padding py-8 space-y-8">
+        <BlockingLoader visible={loading} />
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -380,6 +521,8 @@ const shouldCreate = params.get("create") === "1";
         transition={{ duration: 0.5 }}
         className="flex justify-between items-center my-10"
       >
+  <InlineState hasProfile={hasProfile} loading={loading} />
+
         <div>
           <h1 className="text-4xl font-display font-bold text-gradient-primary mb-2">
             Edit Profile
@@ -409,6 +552,14 @@ const shouldCreate = params.get("create") === "1";
         onConfirm={closeAlert}
         onClose={closeAlert}
       />
+      {/* {hasProfile === false && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-900 p-4 mb-4">
+          <div className="font-medium mb-1">Create your applicant profile</div>
+          <div className="text-sm">
+            Start with your <strong>first name</strong>, <strong>last name</strong>, and <strong>phone</strong>. You can add the rest later.
+          </div>
+        </div>
+      )} */}
 
       {/* Profile Picture Section */}
       <ProfessionalCard variant="executive">
@@ -733,15 +884,23 @@ const shouldCreate = params.get("create") === "1";
         >
           Cancel
         </Button>
-        <Button
+        {/* <Button
           size="lg"
           className="px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-blue-soft hover:shadow-blue-glow focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           onClick={handleSaveAllChanges}
         >
           <Save className="w-4 h-4 mr-2" />
           Save All Changes
+        </Button> */}
+        <Button
+          size="lg"
+          className="px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-blue-soft hover:shadow-blue-glow focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60"
+          onClick={handleSaveAllChanges}
+          disabled={!isMinimalValid}
+        >
+          <Save className="w-4 h-4 mr-2" />
+          {hasProfile ? "Save All Changes" : "Create Profile"}
         </Button>
-
       </div>
     </div>
   );

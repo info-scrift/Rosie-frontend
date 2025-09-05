@@ -1,22 +1,31 @@
 // services/userservice/applicant.ts
 import { getAccessToken } from "@/services/userservice/auth";
 import { getApiUrl } from "@/utils/getUrl";
-import type { ApplicantProfile } from "@/types/applicanttype";
-export async function ensureApplicantProfile(): Promise<{ profile: ApplicantProfile }> {
+
+// services/userservice/applicant.ts
+
+import type { EnsureApplicantProfileResp, GetApplicantProfileResp, ApplicantProfile } from '@/types/applicanttype' ;
+
+
+export async function ensureApplicantProfile(): Promise<EnsureApplicantProfileResp> {
   const token = getAccessToken();
   const res = await fetch(`${getApiUrl()}/applicant/profile/ensure`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token ?? ""}`,
-    },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
     credentials: "include",
   });
   if (!res.ok) {
-    const msg = await res.text().catch(() => "");
-    throw new Error(msg || `Failed to ensure profile: ${res.status}`);
+    const t = await res.text().catch(() => "");
+    throw new Error(t || `Ensure request failed (${res.status})`);
   }
-  return res.json();
+  const data = await res.json();
+  if (typeof data?.exists === "boolean") return data;
+  // legacy normalize
+  return { exists: !!data?.profile, profile: data?.profile ?? null, seed: undefined };
 }
+
+
+
 // services/userservice/applicant.ts
 export async function getApplicantProfile(): Promise<{ profile: any | null }> {
   const token = getAccessToken();
@@ -175,3 +184,33 @@ export async function uploadApplicantPhoto(file: File): Promise<UploadApplicantP
   return res.json();
 }
 
+// services/userservice/applicant.ts
+export async function createApplicantProfileApi(payload: {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  address?: string;
+  Professional_Bio?: string | null;
+  Curent_Job_Title?: string | null;
+  Portfolio_link?: string | null;
+  Linkedin_Profile?: string | null;
+  skills?: string[];
+  experience_years?: number | null;
+  email?: string; // optional
+}) {
+  const token = getAccessToken();
+  const res = await fetch(`${getApiUrl()}/applicant/profile`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token ?? ""}`,
+    },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Create failed: ${res.status} ${text}`);
+  }
+  return res.json(); // { message, profile }
+}
