@@ -369,9 +369,7 @@ const EditProfile = () => {
       setLoading(false);
     }
   };
-  
-  
-  
+    
   useEffect(() => { loadProfile(); }, []);
 
   useEffect(() => {
@@ -392,20 +390,24 @@ const EditProfile = () => {
     (profileData.phone || "").trim();
  // Shows the "complete your profile" banner when there's no profile.
 // We do NOT show errors here, and loading is handled by BlockingLoader.
+// Shows the "complete your profile" banner when there's no profile.
+// We do NOT show errors here, and loading is handled by BlockingLoader.
 const InlineState = ({ hasProfile, loading }: { hasProfile: boolean | null; loading: boolean }) => {
   if (loading) return null; // overlay handles this state
   if (hasProfile === false) {
     return (
-      <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-900 p-4 mb-4">
-        <div className="font-medium mb-1">Create your applicant profile</div>
-        <div className="text-sm">
-          Start with your <strong>first name</strong>, <strong>last name</strong>, and <strong>phone</strong>. You can add the rest later.
+      <div className="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-5 mb-6 shadow-sm">
+        <div className="text-lg font-semibold mb-1">Create your applicant profile</div>
+        <div className="text-sm leading-6">
+          Start with your <strong>first name</strong>, <strong>last name</strong>, and <strong>phone</strong>.{" "}
+          <span className="text-amber-800/80">You can add the rest later.</span>
         </div>
       </div>
     );
   }
   return null;
 };
+
 
     
   const mapExperienceLabelToYears = (label?: string): number | null => {
@@ -513,6 +515,7 @@ const InlineState = ({ hasProfile, loading }: { hasProfile: boolean | null; load
 
     <div className="max-w-4xl mx-auto container-padding py-8 space-y-8">
         <BlockingLoader visible={loading} />
+        <InlineState hasProfile={hasProfile} loading={loading} />
 
       {/* Header */}
       <motion.div
@@ -521,7 +524,6 @@ const InlineState = ({ hasProfile, loading }: { hasProfile: boolean | null; load
         transition={{ duration: 0.5 }}
         className="flex justify-between items-center my-10"
       >
-  <InlineState hasProfile={hasProfile} loading={loading} />
 
         <div>
           <h1 className="text-4xl font-display font-bold text-gradient-primary mb-2">
