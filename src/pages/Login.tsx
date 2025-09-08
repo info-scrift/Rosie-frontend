@@ -8,12 +8,33 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 import { loginUser } from "@/services/userservice/login";
 import { saveAuthTokens } from "@/services/userservice/auth";
-
+import { SweetAlert } from "@/components/ui/SweetAlert";
 const Login = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false
+  });
+  type AlertVariant = "success" | "warning" | "error" | "info";
+  const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
+  const confirmAlert = () => {
+    const cb = alert.onConfirm;
+    closeAlert();
+    cb?.();
+  };
+  const [alert, setAlert] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    variant: AlertVariant;
+    confirmText: string;
+    onConfirm?: () => void;
+  }>({
+    open: false,
+    title: "",
+    message: "",
+    variant: "info",
+    confirmText: "OK",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,35 +42,76 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     // Simulate login
-      console.log("Login attempt:", formData);
-      try {
-        const res = await loginUser(formData.email, formData.password);
-    
-        // Save tokens
-        saveAuthTokens(res.access_token, res.refresh_token,{ role: res.user.role });
-        console.log(res.user.role);
-        // Redirect to dashboard (use current frontend origin)
-        const redirectUrl = new URL(res.redirect);
-        // redirectUrl.port = "8080"; // Replace 5173 with 8080
+    console.log("Login attempt:", formData);
+    try {
+      const res = await loginUser(formData.email, formData.password);
+      const role =
+        (res?.user?.role ||
+          res?.user?.user_metadata?.role ||
+          res?.user?.app_metadata?.role ||
+          "")?.toLowerCase();
+      // Save tokens
+      saveAuthTokens(res.access_token, res.refresh_token, { role: res.user.role });
+      console.log(res.user.role);
+      // use backend-provided redirect
+      const redirectUrl = new URL(res.redirect);
+
+      // (optional) let the rest of the app react immediately
+      window.dispatchEvent(new Event("auth-changed"));
+      window.dispatchEvent(new Event("role-changed"));
+
+      // show success alert, and redirect on confirm
+      setAlert({
+        open: true,
+        title: "Login successful",
+        message: "Redirecting…",
+        variant: "success",
+        confirmText: "Continue",
+        onConfirm: () => {
+          window.location.href = redirectUrl.toString();
+        },
+      });
+
+      // auto-redirect after a short delay so the alert is visible
+      setTimeout(() => {
         window.location.href = redirectUrl.toString();
-    
-        // Alternatively, if you want to use React Router instead:
-        // navigate("/dashboard");
-    
-      } catch (error) {
-        console.error("Login failed:", error);
-        // Show error message to user
-      } finally {
-        setIsLoading(false);
-      }
-    
+      }, 2000); // adjust delay if you want
+
+    } catch (error: any) {
+      // Extract a friendly message
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Invalid email or password. Please try again.";
+
+      setAlert({
+        open: true,
+        title: "Login failed",
+        message: msg,
+        variant: "error",
+        confirmText: "Try again",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+
 
   };
 
   return (
+
     <div className="w-full max-w-md mx-auto">
+      <SweetAlert
+        open={alert.open}
+        title={alert.title}
+        message={alert.message}
+        variant={alert.variant}
+        confirmText={alert.confirmText}
+        onConfirm={confirmAlert}
+        onClose={closeAlert}
+      />
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
         <p className="mt-2 text-gray-600">
@@ -104,16 +166,16 @@ const Login = () => {
               Remember me
             </Label>
           </div>
-          <Link 
-            to="/forgot-password" 
+          <Link
+            to="/forgot-password"
             className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
           >
             Forgot password?
           </Link>
         </div>
 
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           disabled={isLoading}
         >

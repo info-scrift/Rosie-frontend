@@ -49,7 +49,7 @@ const Header = () => {
   const normalizedRole = (role ?? "").trim().toLowerCase();
 
   const navigationItems = [
-    { title: "Home", url: "/", icon: Home },
+    { title: "Home", url: "/", icon: Home, hidden: hasToken }, // hide when logged in
     { title: "Jobs", url: "/jobs", icon: Briefcase },
     // { title: "Voice Bot", url: "/voice-bot", icon: MessageCircle },
     // { title: "Hire", url: "/hire", icon: Phone },
@@ -135,7 +135,9 @@ const Header = () => {
                 >
                   <h2 className="text-xl font-bold text-slate-900 mb-6 px-2">Navigation</h2>
                   <div className="space-y-2">
-                    {navigationItems.map((item, index) => (
+                    {navigationItems
+                      .filter((i) => !i.hidden) 
+                    .map((item, index) => (
                       <motion.div
                         key={item.title}
                         initial={{ opacity: 0, x: -20 }}
