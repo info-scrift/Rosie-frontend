@@ -127,6 +127,8 @@ const Register = () => {
         toast({
           title: "Success!",
           description: data.message,
+          className:
+          "bg-sky-50 text-sky-900 border border-sky-200",
         })
         // Reset form
         setUserFormData({
@@ -163,7 +165,8 @@ const Register = () => {
       toast({
         title: "Error",
         description: "Passwords do not match",
-        variant: "destructive",
+        className:
+        "bg-sky-50 text-sky-900 border border-sky-200",
       })
       return
     }
@@ -196,6 +199,8 @@ const Register = () => {
         toast({
           title: "Success!",
           description: data.message,
+          className:
+          "bg-sky-50 text-sky-900 border border-sky-200",
         })
         // Reset form
         setCompanyFormData({
