@@ -14,6 +14,7 @@ import { Eye, EyeOff, User, Building2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { getApiUrl } from "@/utils/getUrl"
 import { useSearchParams, useNavigate } from "react-router-dom";
+const COMPANY_COMING_SOON = true; // set to false (or delete) to enable the form
 
 interface CompanyFormData {
   email: string
@@ -387,7 +388,8 @@ const Register = () => {
           </form>
         </TabsContent>
 
-        <TabsContent value="company">
+      {/* DIRECTLY ACTIVATE BELOW TO REMOVE THE COMING SOON */}
+        {/* <TabsContent value="company">
           <form onSubmit={handleCompanySubmit} className="space-y-6">
             <div>
               <Label htmlFor="company-name" className="text-gray-700">
@@ -605,7 +607,242 @@ const Register = () => {
               {isLoading ? "Registering Company..." : "Register Company"}
             </Button>
           </form>
-        </TabsContent>
+        </TabsContent> */}
+
+<TabsContent value="company">
+  <div className="relative">
+    {COMPANY_COMING_SOON && (
+      <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-sky-100/70 backdrop-blur-[1px] ring-1 ring-sky-200">
+        <div className="rounded-full bg-sky-600 text-white px-4 py-1.5 text-sm font-semibold shadow">
+          Coming soon!
+        </div>
+      </div>
+    )}
+
+    <form
+      onSubmit={handleCompanySubmit}
+      className={`space-y-6 ${COMPANY_COMING_SOON ? "opacity-60" : ""}`}
+      aria-disabled={COMPANY_COMING_SOON}
+    >
+      <div>
+        <Label htmlFor="company-name" className="text-gray-700">
+          Company Name *
+        </Label>
+        <Input
+          id="company-name"
+          type="text"
+          required
+          value={companyFormData.company_name}
+          onChange={(e) => setCompanyFormData({ ...companyFormData, company_name: e.target.value })}
+          placeholder="Your Company Name"
+          className="mt-1 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="company-email" className="text-gray-700">
+            Email address *
+          </Label>
+          <Input
+            id="company-email"
+            type="email"
+            required
+            value={companyFormData.email}
+            onChange={(e) => setCompanyFormData({ ...companyFormData, email: e.target.value })}
+            placeholder="company@example.com"
+            className="mt-1 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <Label htmlFor="contact-person" className="text-gray-700">
+            Contact Person
+          </Label>
+          <Input
+            id="contact-person"
+            type="text"
+            value={companyFormData.contact_person}
+            onChange={(e) => setCompanyFormData({ ...companyFormData, contact_person: e.target.value })}
+            placeholder="John Doe"
+            className="mt-1 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="industry" className="text-gray-700">
+            Industry
+          </Label>
+          <Select onValueChange={(value) => setCompanyFormData({ ...companyFormData, industry: value })}>
+            <SelectTrigger className="mt-1 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+              <SelectValue placeholder="Select industry" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="technology">Technology</SelectItem>
+              <SelectItem value="healthcare">Healthcare</SelectItem>
+              <SelectItem value="finance">Finance</SelectItem>
+              <SelectItem value="education">Education</SelectItem>
+              <SelectItem value="retail">Retail</SelectItem>
+              <SelectItem value="manufacturing">Manufacturing</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="company-size" className="text-gray-700">
+            Company Size
+          </Label>
+          <Select onValueChange={(value) => setCompanyFormData({ ...companyFormData, company_size: value })}>
+            <SelectTrigger className="mt-1 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+              <SelectValue placeholder="Select size" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1-10">1-10 employees</SelectItem>
+              <SelectItem value="11-50">11-50 employees</SelectItem>
+              <SelectItem value="51-200">51-200 employees</SelectItem>
+              <SelectItem value="201-500">201-500 employees</SelectItem>
+              <SelectItem value="500+">500+ employees</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="website" className="text-gray-700">
+            Website
+          </Label>
+          <Input
+            id="website"
+            type="url"
+            value={companyFormData.website}
+            onChange={(e) => setCompanyFormData({ ...companyFormData, website: e.target.value })}
+            placeholder="https://yourcompany.com"
+            className="mt-1 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <Label htmlFor="phone" className="text-gray-700">
+            Phone
+          </Label>
+          <Input
+            id="phone"
+            type="tel"
+            value={companyFormData.phone}
+            onChange={(e) => setCompanyFormData({ ...companyFormData, phone: e.target.value })}
+            placeholder="+1 (555) 123-4567"
+            className="mt-1 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="address" className="text-gray-700">
+          Address
+        </Label>
+        <Input
+          id="address"
+          type="text"
+          value={companyFormData.address}
+          onChange={(e) => setCompanyFormData({ ...companyFormData, address: e.target.value })}
+          placeholder="123 Business St, City, State"
+          className="mt-1 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="description" className="text-gray-700">
+          Company Description
+        </Label>
+        <Textarea
+          id="description"
+          value={companyFormData.description}
+          onChange={(e) => setCompanyFormData({ ...companyFormData, description: e.target.value })}
+          placeholder="Tell us about your company..."
+          className="mt-1 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[100px]"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="company-password" className="text-gray-700">
+          Password *
+        </Label>
+        <div className="relative mt-1">
+          <Input
+            id="company-password"
+            type={showPassword ? "text" : "password"}
+            required
+            value={companyFormData.password}
+            onChange={(e) => setCompanyFormData({ ...companyFormData, password: e.target.value })}
+            placeholder="Create a strong password"
+            className="pr-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="company-confirmPassword" className="text-gray-700">
+          Confirm Password *
+        </Label>
+        <div className="relative mt-1">
+          <Input
+            id="company-confirmPassword"
+            type={showConfirmPassword ? "text" : "password"}
+            required
+            value={companyFormData.confirmPassword}
+            onChange={(e) => setCompanyFormData({ ...companyFormData, confirmPassword: e.target.value })}
+            placeholder="Confirm your password"
+            className="pr-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+          >
+            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="company-terms"
+          checked={companyFormData.acceptTerms}
+          onCheckedChange={(checked) =>
+            setCompanyFormData({ ...companyFormData, acceptTerms: checked as boolean })
+          }
+        />
+        <Label htmlFor="company-terms" className="text-sm text-gray-700">
+          I agree to the{" "}
+          <Link to="/terms" className="text-blue-600 hover:text-blue-500 transition-colors">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="text-blue-600 hover:text-blue-500 transition-colors">
+            Privacy Policy
+          </Link>
+        </Label>
+      </div>
+
+      <Button
+        type="submit"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+        disabled={isLoading || !companyFormData.acceptTerms}
+      >
+        {isLoading ? "Registering Company..." : "Register Company"}
+      </Button>
+    </form>
+  </div>
+</TabsContent>
+
       </Tabs>
 
       <div className="mt-6 text-center">
