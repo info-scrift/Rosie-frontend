@@ -57,7 +57,7 @@ const Login = () => {
       saveAuthTokens(res.access_token, res.refresh_token, { role: res.user.role });
       console.log(res.user.role);
       // use backend-provided redirect
-      const redirectUrl = new URL(res.redirect);
+      const redirectUrl = new URL(res.redirect, window.location.origin);
 
       // (optional) let the rest of the app react immediately
       window.dispatchEvent(new Event("auth-changed"));
@@ -101,8 +101,6 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
-
-
   };
 
   return (

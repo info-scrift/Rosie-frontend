@@ -271,16 +271,33 @@ const EditProfile = () => {
       let exists = false;
       let seed: any = null;
   
+      // if (ensureCheck) {
+      //   const resp = await ensureApplicantProfile(); // { exists, profile?, seed? }
+      //   exists = !!resp.exists;
+      //   p = resp.profile || null;
+      //   seed = resp.seed || null;
+      // } else {
+      //   const data = await getApplicantProfile(); // { profile: ... | null }
+      //   p = data?.profile || null;
+      //   exists = !!p;
+      // }
       if (ensureCheck) {
         const resp = await ensureApplicantProfile(); // { exists, profile?, seed? }
         exists = !!resp.exists;
         p = resp.profile || null;
         seed = resp.seed || null;
+      
+        // if backend returns exists=true but no profile object, fetch it
+        if (exists && !p) {
+          const data = await getApplicantProfile();
+          p = data?.profile || null;
+        }
       } else {
-        const data = await getApplicantProfile(); // { profile: ... | null }
+        const data = await getApplicantProfile();
         p = data?.profile || null;
         exists = !!p;
       }
+      
   
       setHasProfile(exists);
   
@@ -369,15 +386,24 @@ const EditProfile = () => {
       setLoading(false);
     }
   };
-    
-  useEffect(() => { loadProfile(); }, []);
-
   useEffect(() => {
-    loadProfile();
+    if (hasProfile && shouldCreate) {
+      navigate("/profile/edit", { replace: true });
+    }
+  }, [hasProfile, shouldCreate, navigate]);
+  
+  // useEffect(() => { loadProfile(); }, []);
 
+  // useEffect(() => {
+  //   loadProfile();
+
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [shouldCreate]);
+  useEffect(() => {
+    loadProfile(shouldCreate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldCreate]);
-
+  
   const tabs = [
     { id: "basic", label: "Basic Info", icon: User },
     { id: "professional", label: "Professional", icon: Briefcase },
@@ -422,45 +448,6 @@ const InlineState = ({ hasProfile, loading }: { hasProfile: boolean | null; load
     }
   };
 
-  // const handleSaveAllChanges = async () => {
-  //   try {
-  //     const payload = {
-  //       first_name: profileData.firstName || "",
-  //       last_name: profileData.lastName || "",
-  //       email: profileData.email || "",          // include only if you allow editing email
-  //       phone: profileData.phone || "",
-  //       address: profileData.location || "",
-  //       Professional_Bio: profileData.bio || null,
-  //       Curent_Job_Title: profileData.title || null,
-  //       Portfolio_link: profileData.website || null,
-  //       Linkedin_Profile: profileData.linkedin || null,
-  //       skills: skills ?? [],
-  //       experience_years: mapExperienceLabelToYears(profileData.experience),
-  //     };
-
-  //     await updateApplicantProfileApi(payload);
-
-  //     // optional: success toast / SweetAlert
-  //     // You can reuse your SweetAlert if you add it to this page too
-  //     setAlert({
-  //       open: true,
-  //       title: "Profile updated",
-  //       message: "Your changes have been saved successfully.",
-  //       variant: "success",
-  //     });
-  //   } catch (e: any) {
-  //     console.error(e);
-  //     setAlert({
-  //       open: true,
-  //       title: "Update failed",
-  //       message: typeof e?.message === "string" ? e.message : "Failed to update profile.",
-  //       variant: "error",
-  //     });
-  //   }
-  // };
-
-
-
   const handleSaveAllChanges = async () => {
     if (!isMinimalValid) {
       setAlert({
@@ -489,10 +476,13 @@ const InlineState = ({ hasProfile, loading }: { hasProfile: boolean | null; load
     try {
       if (hasProfile) {
         await updateApplicantProfileApi(payload);           // PUT
-      } else {
+      }  else {
         const { profile } = await createApplicantProfileApi(payload);  // POST
         setHasProfile(true);
-        // Optionally refresh with getApplicantProfile() to pull server-truth
+      
+        // IMPORTANT: remove ?create=1 so future renders don't hit "ensure" again
+        navigate("/profile", { replace: true });
+
       }
 
       setAlert({
