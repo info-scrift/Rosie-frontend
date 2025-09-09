@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { loginUser } from "@/services/userservice/login";
 import { saveAuthTokens } from "@/services/userservice/auth";
 import { SweetAlert } from "@/components/ui/SweetAlert";
 const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -61,7 +62,13 @@ const Login = () => {
       // (optional) let the rest of the app react immediately
       window.dispatchEvent(new Event("auth-changed"));
       window.dispatchEvent(new Event("role-changed"));
-
+      const go = () => {
+        if (redirectUrl.origin === window.location.origin) {
+          navigate(redirectUrl.pathname + redirectUrl.search, { replace: true });
+        } else {
+          window.location.href = redirectUrl.toString();
+        }
+      };
       // show success alert, and redirect on confirm
       setAlert({
         open: true,
@@ -69,15 +76,13 @@ const Login = () => {
         message: "Redirecting…",
         variant: "success",
         confirmText: "Continue",
-        onConfirm: () => {
-          window.location.href = redirectUrl.toString();
-        },
+        onConfirm: go,
+
       });
 
       // auto-redirect after a short delay so the alert is visible
-      setTimeout(() => {
-        window.location.href = redirectUrl.toString();
-      }, 2000); // adjust delay if you want
+      setTimeout(go, 2000); 
+
 
     } catch (error: any) {
       // Extract a friendly message
