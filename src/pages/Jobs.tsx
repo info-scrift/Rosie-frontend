@@ -24,6 +24,10 @@ const Jobs = () => {
 const [allJobs, setAllJobs] = useState<UIJob[]>([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState<string | null>(null);
+useEffect(() => {
+  // Make absolutely sure scroll is unlocked on this page
+  document.body.style.overflow = "";
+}, []);
 
 // fetch whenever currentPage changes (since backend supports ?page=)
 useEffect(() => {

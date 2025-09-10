@@ -433,6 +433,10 @@ const InlineState = ({ hasProfile, loading }: { hasProfile: boolean | null; load
   }
   return null;
 };
+useEffect(() => {
+  // Make absolutely sure scroll is unlocked on this page
+  document.body.style.overflow = "";
+}, []);
 
 
     

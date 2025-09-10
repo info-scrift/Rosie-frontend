@@ -141,13 +141,17 @@
     </div>
   );
 
+  
   const ProfilePage = () => {
     const navigate = useNavigate();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
     const [uploadingResume, setUploadingResume] = useState(false);
     const [authError, setAuthError] = useState(false);
-
+    useEffect(() => {
+      // Make absolutely sure scroll is unlocked on this page
+      document.body.style.overflow = "";
+    }, []);
     // const [alert, setAlert] = useState<{
     //   open: boolean;
     //   title: string;

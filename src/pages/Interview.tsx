@@ -34,7 +34,11 @@ const Interview = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const job = (location.state as { job?: any })?.job;
-
+  useEffect(() => {
+    // Make absolutely sure scroll is unlocked on this page
+    document.body.style.overflow = "";
+  }, []);
+  
   // bounce if no job came via state (optional)
   useEffect(() => {
     if (!job) navigate("/jobs");

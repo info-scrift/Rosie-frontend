@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,11 +18,26 @@ const Login = () => {
   });
   type AlertVariant = "success" | "warning" | "error" | "info";
   const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
+  const redirectTimeout = useRef<number | null>(null);
   const confirmAlert = () => {
+    // prevent double navigation if the timer is still pending
+    if (redirectTimeout.current) {
+      window.clearTimeout(redirectTimeout.current);
+      redirectTimeout.current = null;
+    }
     const cb = alert.onConfirm;
-    closeAlert();
+    closeAlert(); // unlocks body scroll
     cb?.();
   };
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimeout.current) {
+        window.clearTimeout(redirectTimeout.current);
+        redirectTimeout.current = null;
+      }
+    };
+  }, []);
   const [alert, setAlert] = useState<{
     open: boolean;
     title: string;
@@ -80,8 +95,11 @@ const Login = () => {
 
       });
 
-      // auto-redirect after a short delay so the alert is visible
-      setTimeout(go, 2000); 
+      redirectTimeout.current = window.setTimeout(() => {
+        closeAlert();                 // unlocks scroll
+        redirectTimeout.current = null; // mark as cleared
+        go();
+      }, 1500);
 
 
     } catch (error: any) {
@@ -102,6 +120,14 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+  const handleAlertClose = () => {
+    if (redirectTimeout.current) {
+      window.clearTimeout(redirectTimeout.current);
+      redirectTimeout.current = null;
+    }
+    closeAlert();
+  };
+
 
   return (
 
@@ -113,8 +139,10 @@ const Login = () => {
         variant={alert.variant}
         confirmText={alert.confirmText}
         onConfirm={confirmAlert}
-        onClose={closeAlert}
+        onClose={handleAlertClose}
       />
+
+
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
         <p className="mt-2 text-gray-600">

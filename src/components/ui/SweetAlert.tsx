@@ -68,18 +68,44 @@ export const SweetAlert: React.FC<SweetAlertProps> = ({
   const vc = variantClasses[variant];
 
   const handleConfirm = () => {
-    onConfirm?.();
-    onClose();
+    onClose();                       // unlock body scroll immediately
+  if (onConfirm) setTimeout(onConfirm, 0); // run after unmount
   };
 
-  // Optional: prevent background scroll while open
-  useEffect(() => {
-    const prev = document.body.style.overflow;
+  // // Optional: prevent background scroll while open
+  // useEffect(() => {
+  //   const prev = document.body.style.overflow;
+  //   document.body.style.overflow = "hidden";
+  //   return () => {
+  //     document.body.style.overflow = prev;
+  //   };
+  // }, []);
+// Prevent background scroll only while `open` is true
+const prevOverflowRef = React.useRef<string | null>(null);
+
+useEffect(() => {
+  if (open) {
+    // capture once
+    if (prevOverflowRef.current === null) {
+      prevOverflowRef.current = document.body.style.overflow || "";
+    }
     document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
+  } else {
+    // restore immediately when closing
+    if (prevOverflowRef.current !== null) {
+      document.body.style.overflow = prevOverflowRef.current;
+      prevOverflowRef.current = null;
+    }
+  }
+
+  // also restore on unmount
+  return () => {
+    if (prevOverflowRef.current !== null) {
+      document.body.style.overflow = prevOverflowRef.current;
+      prevOverflowRef.current = null;
+    }
+  };
+}, [open]);
 
   return createPortal(
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-[1000]">
