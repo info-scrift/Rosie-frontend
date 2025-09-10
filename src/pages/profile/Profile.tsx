@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { uploadApplicantResume } from "@/services/userservice/applicant";
 import { Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
 import {
   User,
   Mail,
@@ -142,22 +142,41 @@ const LoadingProfileSkeleton = () => (
 );
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingResume, setUploadingResume] = useState(false);
+  // const [alert, setAlert] = useState<{
+  //   open: boolean;
+  //   title: string;
+  //   message?: string;
+  //   variant?: "success" | "error" | "info" | "warning";
+  // }>({ open: false, title: "", message: "", variant: "info" });
   const [alert, setAlert] = useState<{
     open: boolean;
     title: string;
     message?: string;
     variant?: "success" | "error" | "info" | "warning";
+    confirmText?: string;
+    onConfirm?: () => void;
   }>({ open: false, title: "", message: "", variant: "info" });
+  const openSessionExpired = () =>
+    setAlert({
+      open: true,
+      title: "Session expired",
+      message: "Your session has expired. Please log in again to continue.",
+      variant: "warning",
+      confirmText: "Take me to login",
+      onConfirm: () => navigate("/login"),
+    });
+
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoVersion, setPhotoVersion] = useState(0); // bump to force reload after upload
   const [imgError, setImgError] = useState(false);     // show fallback if image fails
 
   const openPhotoPicker = () => photoInputRef.current?.click();
-  
+
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -228,15 +247,26 @@ const ProfilePage = () => {
         } else {
           setProfile(data.profile);
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error("Error fetching profile:", e);
-        // Fallback: treat as empty profile
+
+        const status = e?.status ?? e?.response?.status;
+        const msg = String(e?.message || "");
+
+        // heuristics to catch common “expired/invalid token” cases
+        const looksExpired =
+          status === 401 ||
+          /jwt|token|session/i.test(msg) && /(expired|invalid)/i.test(msg);
+
+        if (looksExpired) {
+          openSessionExpired();
+        }
+
         setProfile(null);
-        // Or auto-redirect:
-        // navigate("/profile/edit?create=1");
       } finally {
         setLoading(false);
       }
+
     })();
   }, []);
 
@@ -261,11 +291,11 @@ const ProfilePage = () => {
     );
   }
 
-// Safe to read because we know `profile` exists here
-const basePhoto = profile.photo_url ?? null;
-const imgSrc = basePhoto
-  ? `${basePhoto}${basePhoto.includes("?") ? "&" : "?"}v=${photoVersion}`
-  : null;
+  // Safe to read because we know `profile` exists here
+  const basePhoto = profile.photo_url ?? null;
+  const imgSrc = basePhoto
+    ? `${basePhoto}${basePhoto.includes("?") ? "&" : "?"}v=${photoVersion}`
+    : null;
 
   const fullName =
     `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || "—";
@@ -384,6 +414,15 @@ const imgSrc = basePhoto
 
                 </div>
               </div>
+              <SweetAlert
+                open={alert.open}
+                title={alert.title}
+                message={alert.message}
+                variant={alert.variant}
+                confirmText={alert.confirmText ?? "OK"}
+                onConfirm={alert.onConfirm}
+                onClose={closeAlert}
+              />
 
               {/* Desktop Edit buttons (stacked) */}
               <div className="hidden sm:flex sm:flex-col sm:items-end gap-2">
