@@ -9,7 +9,7 @@ import type { EnsureApplicantProfileResp, GetApplicantProfileResp, ApplicantProf
 
 export async function ensureApplicantProfile(): Promise<EnsureApplicantProfileResp> {
   const token = getAccessToken();
-  const res = await fetch(`${getApiUrl()}/applicant/profile/ensure`, {
+  const res = await authedFetch(`${getApiUrl()}/applicant/profile/ensure`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
     credentials: "include",
@@ -29,7 +29,7 @@ export async function ensureApplicantProfile(): Promise<EnsureApplicantProfileRe
 // services/userservice/applicant.ts
 export async function getApplicantProfile(): Promise<{ profile: any | null }> {
   const token = getAccessToken();
-  const res = await fetch(`${getApiUrl()}/applicant/profile`, {
+  const res = await authedFetch(`${getApiUrl()}/applicant/profile`, {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token ?? ""}`,
@@ -64,7 +64,7 @@ export async function updateApplicantProfileApi(payload: {
 }) {
   const token = getAccessToken();
 
-  const res = await fetch(`${getApiUrl()}/applicant/profile`, {
+  const res = await authedFetch(`${getApiUrl()}/applicant/profile`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -83,7 +83,7 @@ export async function updateApplicantProfileApi(payload: {
 
 export async function deleteApplicantProfileApi(): Promise<void> {
   const token = getAccessToken();
-  const res = await fetch(`${getApiUrl()}/applicant/profile`, {
+  const res = await authedFetch(`${getApiUrl()}/applicant/profile`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token ?? ""}`,
@@ -104,7 +104,7 @@ export async function changeApplicantPassword(payload: {
   confirmPassword: string;
 }): Promise<{ message: string }> {
   const token = getAccessToken();
-  const res = await fetch(`${getApiUrl()}/applicant/profile/change-password`, {
+  const res = await authedFetch(`${getApiUrl()}/applicant/profile/change-password`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -136,7 +136,7 @@ export async function uploadApplicantResume(file: File): Promise<UploadApplicant
   if (!isPdf) throw new Error("Please upload a PDF.");
   if (file.size > 10 * 1024 * 1024) throw new Error("PDF must be ≤ 10MB.");
 
-  const res = await fetch(`${getApiUrl()}/applicant/profile/upload`, {
+  const res = await authedFetch(`${getApiUrl()}/applicant/profile/upload`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token ?? ""}`, // do NOT set Content-Type for FormData
@@ -168,7 +168,7 @@ export async function uploadApplicantPhoto(file: File): Promise<UploadApplicantP
   if (!allowed.includes(file.type)) throw new Error("Only JPEG, PNG, or WEBP images are allowed.");
   if (file.size > 5 * 1024 * 1024) throw new Error("Photo exceeds 5MB limit.");
 
-  const res = await fetch(`${getApiUrl()}/applicant/profile/photo`, {
+  const res = await authedFetch(`${getApiUrl()}/applicant/profile/photo`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token ?? ""}`, // do NOT set Content-Type with FormData
@@ -182,6 +182,66 @@ export async function uploadApplicantPhoto(file: File): Promise<UploadApplicantP
     throw new Error(`Photo upload failed: ${res.status} ${text}`);
   }
   return res.json();
+}
+// --- add below your imports in services/userservice/applicant.ts ---
+
+// tiny helper to tag errors with an HTTP status
+const httpError = (status: number, message: string) => {
+  const e: any = new Error(message);
+  e.status = status;
+  return e;
+};
+
+const SKEW_MS = 30_000; // 30s clock skew tolerance
+
+/** Extract exp (ms) from a JWT (handles url-safe base64). */
+function getExpMsFromJwt(token: string | null | undefined): number | null {
+  if (!token) return null;
+  const raw = token.startsWith("Bearer ") ? token.slice(7) : token;
+  const parts = raw.split(".");
+  if (parts.length < 2) return null;
+  try {
+    const payloadB64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const json = JSON.parse(atob(payloadB64));
+    return typeof json?.exp === "number" ? json.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Local check to decide if the token is already expired (with skew). */
+export function isTokenExpiredLocal(token: string | null | undefined): boolean {
+  const expMs = getExpMsFromJwt(token);
+  return expMs ? Date.now() >= (expMs - SKEW_MS) : false;
+}
+
+/** One place to add Authorization, throw 401 on expired token, keep FormData safe. */
+async function authedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const token = getAccessToken?.() ?? null;
+
+  // Proactive local expiry check so FE behaves consistently across pages.
+  if (!token || isTokenExpiredLocal(token)) {
+    throw httpError(401, "Token expired");
+  }
+
+  // Merge headers without forcing Content-Type (so FormData works)
+  const headers = new Headers(init.headers || undefined);
+  const bearer = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+  headers.set("Authorization", bearer);
+
+  const res = await fetch(input, {
+    ...init,
+    headers,
+    credentials: "include",
+  });
+
+  if (res.status === 401) {
+    // Normalize to a thrown error with .status=401
+    const text = await res.text().catch(() => "");
+    throw httpError(401, text || "Unauthorized");
+  }
+
+  return res;
 }
 
 // services/userservice/applicant.ts
@@ -199,7 +259,7 @@ export async function createApplicantProfileApi(payload: {
   email?: string; // optional
 }) {
   const token = getAccessToken();
-  const res = await fetch(`${getApiUrl()}/applicant/profile`, {
+  const res = await authedFetch(`${getApiUrl()}/applicant/profile`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
