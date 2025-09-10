@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { updateApplicantProfileApi } from "@/services/userservice/applicant";
 import { SweetAlert } from "@/components/ui/SweetAlert";
+import { useSweetAlert } from "@/hooks/useSweetAlert";
+import { ensureScrollUnlocked } from "@/utils/scrollUtils";
 import { ProfessionalCard } from "@/components/ui/professional-card";
 import { Link, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
@@ -106,13 +108,7 @@ const EditProfile = () => {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const openPhotoPicker = () => photoInputRef.current?.click();
-  const [alert, setAlert] = useState<{
-    open: boolean;
-    title: string;
-    message?: string;
-    variant?: "success" | "error" | "info" | "warning";
-  }>({ open: false, title: "", message: "", variant: "info" });
-  const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
+  const [alert, alertActions] = useSweetAlert();
 
   const [skills, setSkills] = useState<string[]>([
     "React",
@@ -140,21 +136,10 @@ const EditProfile = () => {
       setPhotoUrl(resp.photo_url || null);
       setPhotoVersion((v) => v + 1); // cache-bust the <img> src
       setImgError(false);
-      setAlert({
-        open: true,
-        title: "Photo updated",
-        message: "Your profile photo was uploaded successfully.",
-        variant: "success",
-      });
+      alertActions.showSuccess("Photo updated", "Your profile photo was uploaded successfully.");
     } catch (err) {
       console.error("Photo upload failed:", err);
-      // optional: plug in your SweetAlert here if you use it on this page
-      setAlert({
-        open: true,
-        title: "Photo upload failed",
-        message: err?.message || "Something went wrong while uploading your photo.",
-        variant: "error",
-      });
+      alertActions.showError("Photo upload failed", err?.message || "Something went wrong while uploading your photo.");
     } finally {
       setUploadingPhoto(false);
       if (photoInputRef.current) photoInputRef.current.value = "";
@@ -435,7 +420,7 @@ const InlineState = ({ hasProfile, loading }: { hasProfile: boolean | null; load
 };
 useEffect(() => {
   // Make absolutely sure scroll is unlocked on this page
-  document.body.style.overflow = "";
+  ensureScrollUnlocked();
 }, []);
 
 
@@ -454,12 +439,7 @@ useEffect(() => {
 
   const handleSaveAllChanges = async () => {
     if (!isMinimalValid) {
-      setAlert({
-        open: true,
-        title: "Add the basics",
-        message: "First name, last name, and phone are required.",
-        variant: "warning",
-      });
+      alertActions.showWarning("Add the basics", "First name, last name, and phone are required.");
       return;
     }
 
@@ -489,20 +469,10 @@ useEffect(() => {
 
       }
 
-      setAlert({
-        open: true,
-        title: "Profile saved",
-        message: "Your changes have been saved.",
-        variant: "success",
-      });
+      alertActions.showSuccess("Profile saved", "Your changes have been saved.");
     } catch (e: any) {
       console.error(e);
-      setAlert({
-        open: true,
-        title: "Save failed",
-        message: e?.message || "Could not save your profile.",
-        variant: "error",
-      });
+      alertActions.showError("Save failed", e?.message || "Could not save your profile.");
     }
   };
   return (
@@ -544,9 +514,9 @@ useEffect(() => {
         title={alert.title}
         message={alert.message}
         variant={alert.variant}
-        confirmText="OK"
-        onConfirm={closeAlert}
-        onClose={closeAlert}
+        confirmText={alert.confirmText ?? "OK"}
+        onConfirm={alert.onConfirm}
+        onClose={alertActions.closeAlert}
       />
       {/* {hasProfile === false && (
         <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-900 p-4 mb-4">

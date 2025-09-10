@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, AlertTriangle, Info, X } from "lucide-react";
+import { lockScroll } from "@/utils/scrollUtils";
 
 type SweetAlertProps = {
   open: boolean;
@@ -81,28 +82,25 @@ export const SweetAlert: React.FC<SweetAlertProps> = ({
   //   };
   // }, []);
 // Prevent background scroll only while `open` is true
-const prevOverflowRef = React.useRef<string | null>(null);
+const restoreScrollRef = React.useRef<(() => void) | null>(null);
 
 useEffect(() => {
   if (open) {
-    // capture once
-    if (prevOverflowRef.current === null) {
-      prevOverflowRef.current = document.body.style.overflow || "";
-    }
-    document.body.style.overflow = "hidden";
+    // Lock scroll and store restore function
+    restoreScrollRef.current = lockScroll();
   } else {
-    // restore immediately when closing
-    if (prevOverflowRef.current !== null) {
-      document.body.style.overflow = prevOverflowRef.current;
-      prevOverflowRef.current = null;
+    // Restore scroll when closing
+    if (restoreScrollRef.current) {
+      restoreScrollRef.current();
+      restoreScrollRef.current = null;
     }
   }
 
-  // also restore on unmount
+  // Also restore on unmount
   return () => {
-    if (prevOverflowRef.current !== null) {
-      document.body.style.overflow = prevOverflowRef.current;
-      prevOverflowRef.current = null;
+    if (restoreScrollRef.current) {
+      restoreScrollRef.current();
+      restoreScrollRef.current = null;
     }
   };
 }, [open]);

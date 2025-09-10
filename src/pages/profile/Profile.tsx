@@ -22,6 +22,8 @@
   } from "lucide-react";
   import { getApplicantProfile } from "@/services/userservice/applicant";
   import { SweetAlert } from "@/components/ui/SweetAlert";
+  import { useSweetAlert } from "@/hooks/useSweetAlert";
+  import { ensureScrollUnlocked } from "@/utils/scrollUtils";
   // ---- Types (optional) ----
   type Profile = {
     id: string;
@@ -148,27 +150,15 @@
     const [loading, setLoading] = useState(true);
     const [uploadingResume, setUploadingResume] = useState(false);
     const [authError, setAuthError] = useState(false);
+    const [alert, alertActions] = useSweetAlert();
+    
     useEffect(() => {
       // Make absolutely sure scroll is unlocked on this page
-      document.body.style.overflow = "";
+      ensureScrollUnlocked();
     }, []);
-    // const [alert, setAlert] = useState<{
-    //   open: boolean;
-    //   title: string;
-    //   message?: string;
-    //   variant?: "success" | "error" | "info" | "warning";
-    // }>({ open: false, title: "", message: "", variant: "info" });
-    const [alert, setAlert] = useState<{
-      open: boolean;
-      title: string;
-      message?: string;
-      variant?: "success" | "error" | "info" | "warning";
-      confirmText?: string;
-      onConfirm?: () => void;
-    }>({ open: false, title: "", message: "", variant: "info" });
+    
     const openSessionExpired = () =>
-      setAlert({
-        open: true,
+      alertActions.showAlert({
         title: "Session expired",
         message: "Your session has expired. Please log in again to continue.",
         variant: "error",
@@ -181,7 +171,8 @@
             sessionStorage.removeItem("token");
           } catch {}
           navigate("/login");
-        },    });
+        },
+      });
 
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const photoInputRef = useRef<HTMLInputElement>(null);
@@ -200,17 +191,16 @@
         setProfile(prev => (prev ? { ...prev, photo_url: resp.photo_url } : prev));
         setPhotoVersion(v => v + 1);   // <— forces <img> to reload with a new query param
         setImgError(false);            // <— try to render image again
-        setAlert({ open: true, title: "Photo updated", message: "Your profile photo was uploaded successfully.", variant: "success" });
+        alertActions.showSuccess("Photo updated", "Your profile photo was uploaded successfully.");
       } catch (err: any) {
         console.error(err);
-        setAlert({ open: true, title: "Photo upload failed", message: err?.message || "Something went wrong while uploading your photo.", variant: "error" });
+        alertActions.showError("Photo upload failed", err?.message || "Something went wrong while uploading your photo.");
       } finally {
         setUploadingPhoto(false);
         if (photoInputRef.current) photoInputRef.current.value = "";
       }
     };
 
-    const closeAlert = () => setAlert(a => ({ ...a, open: false }));
 
     const resumeInputRef = useRef<HTMLInputElement>(null);
 
@@ -224,21 +214,11 @@
         const resp = await uploadApplicantResume(file);
         // update local profile to refresh the "View" link
         setProfile((prev) => (prev ? { ...prev, resume_url: resp.resume_url } : prev));
-        setAlert({
-          open: true,
-          title: "Resume updated",
-          message: "Your resume was uploaded successfully.",
-          variant: "success",
-        });
+        alertActions.showSuccess("Resume updated", "Your resume was uploaded successfully.");
 
       } catch (err: any) {
         console.error(err);
-        setAlert({
-          open: true,
-          title: "Resume upload failed",
-          message: err?.message || "Something went wrong while uploading your resume.",
-          variant: "error",
-        });
+        alertActions.showError("Resume upload failed", err?.message || "Something went wrong while uploading your resume.");
 
       } finally {
         setUploadingResume(false);
@@ -302,7 +282,7 @@
             variant={alert.variant}
             confirmText={alert.confirmText ?? "OK"}
             onConfirm={alert.onConfirm}
-            onClose={closeAlert}
+            onClose={alertActions.closeAlert}
           />
         );
       }
@@ -317,7 +297,7 @@
             variant={alert.variant}
             confirmText={alert.confirmText ?? "OK"}
             onConfirm={alert.onConfirm}
-            onClose={closeAlert}
+            onClose={alertActions.closeAlert}
           />
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-24 sm:pb-28 my-8 sm:my-10">
             <div className="text-center py-16 sm:py-20 text-gray-600">
@@ -461,15 +441,6 @@
 
                   </div>
                 </div>
-                <SweetAlert
-                  open={alert.open}
-                  title={alert.title}
-                  message={alert.message}
-                  variant={alert.variant}
-                  confirmText={alert.confirmText ?? "OK"}
-                  onConfirm={alert.onConfirm}
-                  onClose={closeAlert}
-                />
 
                 {/* Desktop Edit buttons (stacked) */}
                 <div className="hidden sm:flex sm:flex-col sm:items-end gap-2">
@@ -525,16 +496,6 @@
               </p>
             </CardContent>
           </Card>
-          {/* sweet alert for resume
-          <SweetAlert
-            open={alert.open}
-            title={alert.title}
-            message={alert.message}
-            variant={alert.variant}
-            confirmText="OK"
-            onConfirm={closeAlert}
-            onClose={closeAlert}
-          /> */}
 
           {/* About */}
           <Card>
@@ -556,17 +517,6 @@
               )}
             </CardContent>
           </Card>
-          {/* sweet alert for resume
-          <SweetAlert
-            open={alert.open}
-            title={alert.title}
-            message={alert.message}
-            variant={alert.variant}
-            confirmText="OK"
-            onConfirm={closeAlert}
-            onClose={closeAlert}
-          /> */}
-
 
           {/* Skills (wrap nicely on mobile) */}
           <Card>
@@ -674,6 +624,17 @@
 
 
         </div>
+        
+        {/* Single SweetAlert for all notifications */}
+        <SweetAlert
+          open={alert.open}
+          title={alert.title}
+          message={alert.message}
+          variant={alert.variant}
+          confirmText={alert.confirmText ?? "OK"}
+          onConfirm={alert.onConfirm}
+          onClose={alertActions.closeAlert}
+        />
       </div>
     );
   };
