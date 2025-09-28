@@ -611,13 +611,13 @@
 
   <TabsContent value="company">
     <div className="relative">
-      {COMPANY_COMING_SOON && (
+      {/* {COMPANY_COMING_SOON && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-sky-100/70 backdrop-blur-[1px] ring-1 ring-sky-200">
           <div className="rounded-full bg-sky-600 text-white px-4 py-1.5 text-sm font-semibold shadow">
             Coming soon!
           </div>
         </div>
-      )}
+      )} */}
 
       <form
         onSubmit={handleCompanySubmit}

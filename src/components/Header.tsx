@@ -27,7 +27,7 @@ const Header = () => {
 
 
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "accessToken" || e.key === "role") syncAuth();
+      if (e.key === "access_token" || e.key === "role") syncAuth();
     };
 
     // Custom events your auth code can dispatch after login/logout/role change
@@ -65,13 +65,26 @@ const Header = () => {
     { title: "Notifications", url: "/profile/notifications" },
   ];
 
-  const employerItems = [
-    { title: "Dashboard", url: "/client/dashboard" },
-    { title: "Post a Job", url: "/client/jobs" },
-    { title: "Manage Candidates", url: "/client/candidates" },
-    { title: "Analytics", url: "/client/analytics" },
-    { title: "Settings", url: "/client/settings" },
-  ];
+  // const employerItems = [
+  //   { title: "Dashboard", url: "/client/dashboard" },
+  //   { title: "Post a Job", url: "/client/jobs" },
+  //   { title: "Manage Candidates", url: "/client/candidates" },
+  //   { title: "Analytics", url: "/client/analytics" },
+  //   { title: "Settings", url: "/client/settings" },
+  // ];
+  
+// Header.tsx
+const employerItems = [
+  { title: "Dashboard",          url: "/client/portal" },
+  { title: "Jobs",               url: "/client/portal/jobs" },
+  { title: "Post a Job",         url: "/client/portal/jobs/create" },
+  { title: "Candidates",         url: "/client/portal/candidates" },
+  { title: "Messages",           url: "/client/portal/messages" },
+  { title: "Analytics",          url: "/client/portal/analytics" },
+  { title: "Billing",            url: "/client/portal/billing" },
+  { title: "Team",               url: "/client/portal/team" },
+  { title: "Settings",           url: "/client/portal/settings" },
+];
 
   const isActive = (path: string) => location.pathname === path;
 

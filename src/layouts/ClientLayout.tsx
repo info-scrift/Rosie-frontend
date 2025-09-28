@@ -5,13 +5,15 @@ import ClientSidebar from "@/components/ClientSidebar";
 import ClientTopBar from "@/components/ClientTopBar";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { PageTransition } from "@/components/ui/page-transition";
-
+import Header from "@/components/Header";
 const ClientLayout = () => {
   useScrollToTop();
   
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      <ClientSidebar />
+      {/* <ClientSidebar /> */}
+      <Header />
+
       <div className="flex-1 flex flex-col">
         <ClientTopBar />
         <motion.main 

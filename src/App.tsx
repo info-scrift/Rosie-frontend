@@ -4,7 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import ProtectedRoute from "./routes/ProtectedRoute";
+import { Navigate } from "react-router-dom";
 // Layouts
 import PublicLayout from "./layouts/PublicLayout";
 import AuthLayout from "./layouts/AuthLayout";
@@ -92,7 +93,7 @@ import Interview from "./pages/Interview";
 const queryClient = new QueryClient();
 
 const App = () => (
-  
+
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -105,7 +106,7 @@ const App = () => (
             <Route path="jobs" element={<Jobs />} />
             <Route path="jobs/:jobId" element={<JobDetail />} />
             <Route path="voice-bot" element={<VoiceBot />} />
-            <Route path="interview" element={<Interview />}/>
+            <Route path="interview" element={<Interview />} />
             <Route path="upload-resume" element={<UploadResume />} />
             <Route path="job-matches" element={<JobMatches />} />
             <Route path="apply" element={<QuickApply />} />
@@ -116,7 +117,7 @@ const App = () => (
 
           {/* Auth Routes */}
           <Route element={<AuthLayout />}>
-          
+
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
@@ -143,7 +144,7 @@ const App = () => (
             <Route path="client/reset-password" element={<ClientResetPassword />} />
           </Route>
 
-          {/* Client Portal Routes */}
+          {/* Client Portal Routes
           <Route path="client/portal" element={<ClientLayout />}>
             <Route index element={<ClientDashboard />} />
             <Route path="jobs" element={<ClientJobs />} />
@@ -158,7 +159,33 @@ const App = () => (
             <Route path="billing" element={<ClientBilling />} />
             <Route path="settings" element={<ClientSettings />} />
             <Route path="team" element={<TeamManagement />} />
+          </Route> */}
+          {/* Client Portal Routes (guarded) */}
+          <Route
+            path="client/portal"
+            element={
+              <ProtectedRoute>
+                <ClientLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<ClientDashboard />} />
+            <Route path="jobs" element={<ClientJobs />} />
+            <Route path="jobs/create" element={<CreateJob />} />
+            <Route path="jobs/:jobId" element={<ViewJob />} />
+            <Route path="jobs/:jobId/edit" element={<EditJob />} />
+            <Route path="candidates" element={<ClientCandidates />} />
+            <Route path="candidates/:candidateId" element={<ViewCandidate />} />
+            <Route path="saved-candidates" element={<SavedCandidates />} />
+            <Route path="messages" element={<ClientMessages />} />
+            <Route path="analytics" element={<ClientAnalytics />} />
+            <Route path="billing" element={<ClientBilling />} />
+            <Route path="settings" element={<ClientSettings />} />
+            <Route path="team" element={<TeamManagement />} />
           </Route>
+
+          {/* Optional: keep old /client links working */}
+          <Route path="client" element={<Navigate to="/client/portal" replace />} />
 
           {/* Admin Auth Routes */}
           <Route element={<AuthLayout />}>
